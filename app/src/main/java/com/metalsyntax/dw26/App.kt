@@ -27,6 +27,7 @@ class App : Application() {
             sdkLogCallback = SdkLogCallback.ICallBack { tag, msg -> Log.d("IDO/$tag", msg) }
         })
         Watch.init(this)
+        applyTheme()
         Health.init(this)
         registerAllCallbacks()
     }
@@ -54,6 +55,13 @@ class App : Application() {
         val gson = Gson()
         private val main = Handler(Looper.getMainLooper())
         private val listeners = mutableListOf<SdkListener>()
+
+        /** Modo de color elegido en Ajustes; "black" es el modo noche con fondos negros (tema Theme.DW26.Black). */
+        fun applyTheme() = androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(when (Watch.theme) {
+            "light" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            "dark", "black" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+            else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        })
 
         fun listen(l: SdkListener) = main.post { listeners += l }
         fun unlisten(l: SdkListener) = main.post { listeners -= l }

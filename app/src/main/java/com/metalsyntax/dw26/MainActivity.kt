@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private val onSdk: SdkListener = { method, args -> handle(method, args) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (Watch.theme == "black") setTheme(R.style.Theme_DW26_Black)
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
@@ -213,7 +214,7 @@ class MainActivity : AppCompatActivity() {
         rowSub("alarms", when {
             !Alarms.loaded -> "Toca para ver las alarmas del reloj"
             Alarms.list.isEmpty() -> "Sin alarmas"
-            else -> Alarms.list.filter { it.isOn_off }.joinToString("  ") { "%02d:%02d".format(it.hour, it.minute) }.ifEmpty { "Todas apagadas" }
+            else -> Alarms.list.filter { it.isOn_off }.joinToString("  ") { clock(it.hour, it.minute) }.ifEmpty { "Todas apagadas" }
         })
         rowSub("weather", if (!Watch.weatherEnabled) "Desactivado" else Weather.summary ?: "Se actualiza cada hora")
         rowSub("music", if (!listener) "Necesita el permiso de notificaciones" else if (!Watch.musicEnabled) "Desactivado" else Music.nowPlaying ?: "Muestra la canción y controla la música")
@@ -222,13 +223,12 @@ class MainActivity : AppCompatActivity() {
         toggle("weather", Watch.weatherEnabled)
         toggle("music", listener && Watch.musicEnabled)
         toggle("calls", Calls.granted(this) && Watch.callsEnabled)
-        goalChips?.let { g -> (0 until g.childCount).map { g.getChildAt(it) as Chip }.forEach { it.isChecked = it.tag == Watch.stepGoal } }
+        chipRows.forEach { (g, sel) -> (0 until g.childCount).map { g.getChildAt(it) as Chip }.forEach { it.isChecked = it.tag == sel() } }
     }
 
     // ---------- pantalla Reloj ----------
 
     private val rows = mutableMapOf<String, View>()
-    private var goalChips: ChipGroup? = null
     private val notifAccess get() = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
 
     private fun buildWatchRows() {
@@ -263,7 +263,12 @@ class MainActivity : AppCompatActivity() {
         row(r, "find", R.drawable.ic_vibrate, "Buscar mi reloj", "Lo hace vibrar hasta 15 segundos") { findWatch() }
         row(r, "sync", R.drawable.ic_sync, "Sincronizar ahora", null) { Watch.sync(); render() }
         row(r, "time", R.drawable.ic_clock, "Ajustar hora del reloj", "Usa la hora del teléfono") { BLEManager.setTime(); toast("Hora enviada al reloj") }
-        goalRow(r)
+        chipRow(r, "goal", R.drawable.ic_flag, "Meta diaria de pasos",
+            listOf(5000, 6000, 8000, 10000, 12000, 15000).map { fmt(it.toLong()) to it }, { Watch.stepGoal }) { Watch.applyStepGoal(it as Int) }
+        chipRow(r, "theme", R.drawable.ic_theme, "Tema",
+            listOf("Automático" to "auto", "Claro" to "light", "Oscuro" to "dark", "Negro" to "black"), { Watch.theme }) {
+            if (it != Watch.theme) { Watch.theme = it as String; App.applyTheme(); recreate() }
+        }
         row(r, "log", R.drawable.ic_bug, "Registro técnico", "Para diagnóstico") {
             MaterialAlertDialogBuilder(this).setTitle("Registro técnico")
                 .setMessage(App.history.toList().takeLast(120).joinToString("\n"))
@@ -300,31 +305,32 @@ class MainActivity : AppCompatActivity() {
         rows[key]?.findViewById<MaterialSwitch>(R.id.toggle)?.isChecked = on
     }
 
-    /** Meta de pasos: fila con chips de valores fijos, sin diálogo. */
-    private fun goalRow(parent: LinearLayout) {
-        row(parent, "goal", R.drawable.ic_flag, "Meta diaria de pasos", null) {}
-        rows["goal"]!!.findViewById<View>(R.id.chevron).visibility = View.GONE
-        val group = ChipGroup(this).apply { isSingleSelection = true; isSelectionRequired = true; chipSpacingHorizontal = dp(8) }
-        listOf(5000, 6000, 8000, 10000, 12000, 15000).forEach { steps ->
+    /** Fila de ajuste con chips de opciones fijas (sin diálogo). [selected] se relee en cada render. */
+    private val chipRows = mutableListOf<Pair<ChipGroup, () -> Any>>()
+
+    private fun chipRow(parent: LinearLayout, key: String, icon: Int, title: String, options: List<Pair<String, Any>>, selected: () -> Any, onPick: (Any) -> Unit) {
+        row(parent, key, icon, title, null) {}
+        rows[key]!!.findViewById<View>(R.id.chevron).visibility = View.GONE
+        val group = ChipGroup(this).apply { isSingleSelection = true; isSelectionRequired = true; isSingleLine = true; chipSpacingHorizontal = dp(8) }
+        options.forEach { (label, value) ->
             group.addView(Chip(this, null, com.google.android.material.R.attr.chipStyle).apply {
-                text = fmt(steps.toLong()); tag = steps; isCheckable = true
-                setOnClickListener { Watch.applyStepGoal(steps); render() }
+                text = label; tag = value; isCheckable = true
+                setOnClickListener { onPick(value); render() }
             })
         }
-        goalChips = group
+        chipRows += group to selected
         parent.addView(HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
-            setPadding(dp(76), 0, dp(20), dp(12)); clipToPadding = false
+            setPadding(dp(20), 0, dp(20), dp(12)); clipToPadding = false
             addView(group)
         })
     }
 
     private fun findWatch() {
         if (!Watch.connected) return toast("El reloj no está conectado")
-        if (Watch.functions?.findDevice == false) return toast("Tu reloj no admite esta función")
         Watch.findDevice()
         val d = MaterialAlertDialogBuilder(this).setTitle("Buscando tu reloj…")
-            .setMessage("El DW26 está vibrando. Puedes detenerlo desde el reloj.")
+            .setMessage("El DW26 está vibrando. Puedes detenerlo desde el reloj o aquí.")
             .setPositiveButton("Lo encontré") { _, _ -> Watch.stopFindDevice() }
             .setOnDismissListener { Watch.stopFindDevice() }
             .show()
@@ -456,7 +462,7 @@ class MainActivity : AppCompatActivity() {
             val v = layoutInflater.inflate(R.layout.item_row, box, false)
             v.setPadding(0, 0, 0, 0)
             v.findViewById<ImageView>(R.id.icon).setImageResource(R.drawable.ic_alarm)
-            v.findViewById<TextView>(R.id.title).apply { text = "%02d:%02d".format(a.hour, a.minute); textSize = 24f }
+            v.findViewById<TextView>(R.id.title).apply { text = clock(a.hour, a.minute); textSize = 24f }
             v.findViewById<TextView>(R.id.sub).apply { text = Alarms.days(a); visibility = View.VISIBLE }
             v.findViewById<View>(R.id.chevron).visibility = View.GONE
             v.findViewById<MaterialSwitch>(R.id.toggle).apply {
@@ -470,7 +476,7 @@ class MainActivity : AppCompatActivity() {
             box.addView(MaterialButton(this).apply {
                 text = "Agregar alarma"; setIconResource(R.drawable.ic_add)
                 layoutParams = LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(16) }
-                setOnClickListener { pickTime(7, 0) { h, m -> pickDays(Alarms.new(h, m)) { Alarms.save(Alarms.list + it) } } }
+                setOnClickListener { val now = java.time.LocalTime.now().plusMinutes(1); pickTime(now.hour, now.minute) { h, m -> pickDays(Alarms.new(h, m)) { Alarms.save(Alarms.list + it) } } }
             })
         }
         sheet.setContentView(ScrollView(this).apply { addView(box) })
@@ -478,7 +484,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun editAlarm(a: AlarmV3) {
-        MaterialAlertDialogBuilder(this).setTitle("%02d:%02d".format(a.hour, a.minute))
+        MaterialAlertDialogBuilder(this).setTitle(clock(a.hour, a.minute))
             .setItems(arrayOf("Cambiar hora", "Repetir", "Eliminar")) { _, which ->
                 when (which) {
                     0 -> pickTime(a.hour, a.minute) { h, m -> a.hour = h; a.minute = m; Alarms.save(Alarms.list) }
@@ -489,7 +495,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pickTime(h: Int, m: Int, done: (Int, Int) -> Unit) {
-        MaterialTimePicker.Builder().setTimeFormat(TimeFormat.CLOCK_24H).setHour(h).setMinute(m).setTitleText("Hora de la alarma").build()
+        val is24 = android.text.format.DateFormat.is24HourFormat(this)
+        MaterialTimePicker.Builder().setTimeFormat(if (is24) TimeFormat.CLOCK_24H else TimeFormat.CLOCK_12H)
+            .setHour(h).setMinute(m).setTitleText("Hora de la alarma").build()
             .apply { addOnPositiveButtonClickListener { done(hour, minute) } }
             .show(supportFragmentManager, "time")
     }
@@ -537,8 +545,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun tile(key: String, icon: Int, color: Int, label: String) {
         val v = layoutInflater.inflate(R.layout.item_tile, b.tiles, false)
+        // FILL: todas las tarjetas de una fila igualan la altura de la más alta
         v.layoutParams = GridLayout.LayoutParams(v.layoutParams as ViewGroup.MarginLayoutParams).apply {
-            width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
+            width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); setGravity(android.view.Gravity.FILL)
         }
         v.findViewById<ImageView>(R.id.icon).apply { setImageResource(icon); setColorFilter(getColor(color)) }
         v.findViewById<TextView>(R.id.label).text = label
@@ -551,6 +560,13 @@ class MainActivity : AppCompatActivity() {
         v.findViewById<TextView>(R.id.value).text = if (value == null) "--" else value + (unit?.let { " $it" } ?: "")
         v.findViewById<TextView>(R.id.sub).apply { text = sub ?: " " }
     }
+
+    /** Hora en el formato del teléfono (12 h con a. m./p. m. o 24 h). */
+    private fun clock(h: Int, m: Int): String =
+        android.text.format.DateFormat.getTimeFormat(this).format(java.util.Date(0).apply {
+            val c = java.util.Calendar.getInstance().apply { set(java.util.Calendar.HOUR_OF_DAY, h); set(java.util.Calendar.MINUTE, m) }
+            time = c.timeInMillis
+        })
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun fmt(n: Long) = "%,d".format(es, n)

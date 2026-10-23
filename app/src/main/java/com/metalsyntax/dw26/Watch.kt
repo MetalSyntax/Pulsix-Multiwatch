@@ -16,6 +16,7 @@ import com.ido.ble.protocol.model.AlarmV3
 import com.ido.ble.protocol.model.BatteryInfo
 import com.ido.ble.protocol.model.DeviceChangedPara
 import com.ido.ble.protocol.model.Goal
+import com.ido.ble.protocol.model.IncomingCallInfo
 import com.ido.ble.protocol.model.SupportFunctionInfo
 import com.ido.ble.protocol.model.LiveData
 
@@ -54,19 +55,33 @@ object Watch {
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val stopFind = Runnable { stopFindDevice() }
 
-    /** Como VeryFit: vibra hasta 15 s o hasta que se apague desde el reloj o la app. */
+    private var findByCall = false
+
+    /**
+     * Hace vibrar el reloj hasta 15 s. El DW26 declara findDevice=false (el comando de VeryFit no hace nada),
+     * así que en ese caso se simula una llamada entrante, que sí vibra, y se corta al terminar.
+     */
     fun findDevice() {
         if (!connected) return
         finding = true
-        BLEManager.startFindDevice()
+        findByCall = functions?.findDevice != true
+        if (findByCall) BLEManager.setIncomingCallInfo(IncomingCallInfo().apply { name = "Buscando tu reloj"; phoneNumber = "" })
+        else BLEManager.startFindDevice()
         handler.removeCallbacks(stopFind)
         handler.postDelayed(stopFind, 15_000)
     }
 
     fun stopFindDevice() {
         handler.removeCallbacks(stopFind)
-        if (finding) { finding = false; BLEManager.stopFindDevice() }
+        if (!finding) return
+        finding = false
+        if (findByCall) BLEManager.setStopInComingCall() else BLEManager.stopFindDevice()
     }
+
+    /** auto | light | dark | black */
+    var theme: String
+        get() = prefs.getString("theme", "auto") ?: "auto"
+        set(v) = prefs.edit().putString("theme", v).apply()
 
     var weatherEnabled: Boolean
         get() = prefs.getBoolean("weather", true)

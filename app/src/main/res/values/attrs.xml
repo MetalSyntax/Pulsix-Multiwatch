@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- colores de fondo que cambian en el modo Negro -->
+    <attr name="dwBg" format="color" />
+    <attr name="dwSurface" format="color" />
+    <attr name="dwHeader" format="color" />
+    <attr name="dwSky" format="color" />
+</resources>

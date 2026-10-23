@@ -17,7 +17,13 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/dw_bg</item>
         <item name="android:windowLightNavigationBar">@bool/light_bars</item>
+        <item name="dwBg">@color/dw_bg</item>
+        <item name="dwSurface">@color/dw_surface</item>
+        <item name="dwHeader">@color/dw_header</item>
+        <item name="dwSky">@color/dw_sky</item>
         <item name="chipStyle">@style/DW.Chip</item>
+        <!-- plano: sin el aclarado de superficies elevadas del modo noche -->
+        <item name="elevationOverlayEnabled">false</item>
         <!-- esquinas redondeadas en todos los componentes -->
         <item name="shapeAppearanceCornerExtraSmall">@style/DW.Square</item>
         <item name="shapeAppearanceCornerSmall">@style/DW.Square</item>
@@ -39,11 +45,27 @@
         <item name="cornerSize">50%</item>
     </style>
 
+    <!-- Negro: fondos negros puros (pantallas AMOLED); se usa junto con el modo noche -->
+    <style name="Theme.DW26.Black">
+        <item name="dwBg">#000000</item>
+        <item name="dwSurface">#101114</item>
+        <item name="dwHeader">#000000</item>
+        <item name="dwSky">#1B1D22</item>
+        <item name="colorSurface">#101114</item>
+        <item name="colorSurfaceContainer">#101114</item>
+        <item name="colorSurfaceContainerHigh">#101114</item>
+        <item name="colorPrimaryContainer">#1B1D22</item>
+        <item name="colorSecondaryContainer">#1B1D22</item>
+        <item name="android:colorBackground">#000000</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+    </style>
+
     <style name="DW" />
 
     <!-- plano: sin borde ni sombra, solo superficie redondeada -->
     <style name="DW.Card" parent="Widget.Material3.CardView.Filled">
-        <item name="cardBackgroundColor">@color/dw_surface</item>
+        <item name="cardBackgroundColor">?attr/dwSurface</item>
         <item name="cardCornerRadius">20dp</item>
         <item name="cardElevation">0dp</item>
         <item name="strokeWidth">0dp</item>
@@ -61,7 +83,7 @@
     </style>
 
     <style name="DW.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/dw_sky</item>
+        <item name="android:color">?attr/dwSky</item>
         <item name="shapeAppearance">@style/DW.Pill</item>
     </style>
 
