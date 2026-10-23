@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dw_bg"
+    android:orientation="vertical">
+
+    <!-- barra superior con la marca -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/dw_navy"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="14dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.28"
+                android:text="DAEWOO"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0.08"
+                android:text="DW26 SMART WATCH"
+                android:textColor="#A9C3E8"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/statusPill"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/pill"
+            android:drawablePadding="6dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- INICIO -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageHome"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/hero_bg"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:id="@+id/today"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Hoy"
+                        android:textColor="#CFE0F7"
+                        android:textSize="14sp" />
+
+                    <FrameLayout
+                        android:layout_width="190dp"
+                        android:layout_height="190dp"
+                        android:layout_marginTop="8dp">
+
+                        <com.metalsyntax.dw26.Ring
+                            android:id="@+id/ring"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <ImageView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:src="@drawable/ic_steps"
+                                app:tint="#FFFFFF" />
+
+                            <TextView
+                                android:id="@+id/steps"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textColor="#FFFFFF"
+                                android:textSize="38sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/goal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="#CFE0F7"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </FrameLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/syncBtn"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Sincronizar"
+                        app:backgroundTint="#26FFFFFF"
+                        app:icon="@drawable/ic_sync"
+                        app:iconTint="#FFFFFF"
+                        android:textColor="#FFFFFF" />
+
+                    <TextView
+                        android:id="@+id/lastSync"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="#CFE0F7"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <GridLayout
+                    android:id="@+id/tiles"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:columnCount="2" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- SALUD -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageHealth"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Pasos · últimos 7 días" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:id="@+id/stepsWeek" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                        <com.metalsyntax.dw26.Chart android:id="@+id/stepsChart" android:layout_width="match_parent" android:layout_height="150dp" android:layout_marginTop="8dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Sueño" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:id="@+id/sleepLast" style="@style/DW.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                        <TextView android:id="@+id/sleepDetail" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" />
+                        <com.metalsyntax.dw26.Chart android:id="@+id/sleepChart" android:layout_width="match_parent" android:layout_height="130dp" android:layout_marginTop="12dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ritmo cardíaco · hoy" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                        <TextView android:id="@+id/hrSummary" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                        <com.metalsyntax.dw26.Chart android:id="@+id/hrChart" android:layout_width="match_parent" android:layout_height="150dp" android:layout_marginTop="8dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- RELOJ -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageWatch"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/watchList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="20dp">
+                        <ImageView
+                            android:layout_width="72dp"
+                            android:layout_height="72dp"
+                            android:background="@drawable/circle_sky"
+                            android:padding="16dp"
+                            android:src="@drawable/ic_watch"
+                            app:tint="@color/dw_blue" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:layout_weight="1" android:orientation="vertical">
+                            <TextView style="@style/DW.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DW26" />
+                            <TextView android:id="@+id/watchState" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                            <TextView android:id="@+id/watchInfo" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+                    <LinearLayout android:id="@+id/rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="6dp" />
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- VINCULAR (primer uso) -->
+        <LinearLayout
+            android:id="@+id/pagePair"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:layout_marginTop="32dp"
+                android:background="@drawable/circle_sky"
+                android:padding="28dp"
+                android:src="@drawable/ic_watch"
+                app:tint="@color/dw_blue" />
+
+            <TextView
+                style="@style/DW.Value"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Vincula tu DW26" />
+
+            <TextView
+                style="@style/DW.Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="Acerca el reloj al teléfono, con la pantalla encendida, y toca Buscar." />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/scanBtn"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="24dp"
+                android:text="Buscar reloj"
+                app:cornerRadius="28dp" />
+
+            <ListView
+                android:id="@+id/devices"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="12dp"
+                android:divider="@color/dw_line"
+                android:dividerHeight="1dp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/nav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+        app:menu="@menu/bottom_nav" />
+</LinearLayout>

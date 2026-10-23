@@ -1,0 +1,5 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/tab_home" android:icon="@drawable/ic_home" android:title="Inicio" />
+    <item android:id="@+id/tab_health" android:icon="@drawable/ic_heart" android:title="Salud" />
+    <item android:id="@+id/tab_watch" android:icon="@drawable/ic_watch" android:title="Reloj" />
+</menu>
