@@ -77,3 +77,56 @@ class Chart @JvmOverloads constructor(c: Context, a: AttributeSet? = null) : Vie
         }
     }
 }
+
+/**
+ * Simulación del DW26: cuerpo redondeado, corona lateral y pantalla 240×284 con la esfera dentro.
+ * [inUse] dibuja el contorno azul de "en uso".
+ */
+class WatchMock @JvmOverloads constructor(c: Context, a: AttributeSet? = null) : View(c, a) {
+    var bitmap: android.graphics.Bitmap? = null
+        set(v) { field = v; invalidate() }
+    var inUse = false
+        set(v) { field = v; invalidate() }
+    var placeholder: android.graphics.drawable.Drawable? = null
+
+    private val body = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val screen = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
+    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = c.getColor(R.color.dw_blue) }
+    private val img = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val r = RectF(); private val sr = RectF(); private val clip = Path()
+
+    override fun onMeasure(w: Int, h: Int) {
+        val width = MeasureSpec.getSize(w)
+        // cuerpo: pantalla 240×284 + bisel; la corona sobresale a la derecha
+        setMeasuredDimension(width, (width * 0.94f / 240f * 284f * 1.04f).toInt())
+    }
+
+    override fun onDraw(cv: Canvas) {
+        val pad = width * 0.03f
+        val bodyW = width * 0.94f - pad
+        r.set(pad, pad, pad + bodyW, height - pad)
+        val bodyR = bodyW * 0.24f
+        body.shader = android.graphics.LinearGradient(0f, r.top, 0f, r.bottom, 0xFF2C3340.toInt(), 0xFF161A21.toInt(), android.graphics.Shader.TileMode.CLAMP)
+        // corona
+        cv.drawRoundRect(r.right - bodyW * 0.02f, r.top + r.height() * 0.28f, r.right + bodyW * 0.05f, r.top + r.height() * 0.42f, bodyW * 0.03f, bodyW * 0.03f, body)
+        cv.drawRoundRect(r, bodyR, bodyR, body)
+        if (inUse) { ring.strokeWidth = pad * 0.9f; cv.drawRoundRect(r, bodyR, bodyR, ring) }
+        val bezel = bodyW * 0.07f
+        sr.set(r.left + bezel, r.top + bezel, r.right - bezel, r.bottom - bezel)
+        val sR = bodyR * 0.72f
+        cv.drawRoundRect(sr, sR, sR, screen)
+        clip.reset(); clip.addRoundRect(sr, sR, sR, Path.Direction.CW)
+        cv.save(); cv.clipPath(clip)
+        bitmap?.let { b ->
+            // centerCrop
+            val scale = maxOf(sr.width() / b.width, sr.height() / b.height)
+            val dw = b.width * scale; val dh = b.height * scale
+            cv.drawBitmap(b, null, RectF(sr.centerX() - dw / 2, sr.centerY() - dh / 2, sr.centerX() + dw / 2, sr.centerY() + dh / 2), img)
+        } ?: placeholder?.let { d ->
+            val s = (sr.width() * 0.35f).toInt()
+            d.setBounds((sr.centerX() - s / 2).toInt(), (sr.centerY() - s / 2).toInt(), (sr.centerX() + s / 2).toInt(), (sr.centerY() + s / 2).toInt())
+            d.draw(cv)
+        }
+        cv.restore()
+    }
+}

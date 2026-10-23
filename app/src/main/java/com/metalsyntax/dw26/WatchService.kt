@@ -26,13 +26,22 @@ class WatchService : Service() {
         if (Build.VERSION.SDK_INT >= 29) startForeground(1, build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         else startForeground(1, build())
         App.listen(onSdk)
+        Music.start(this)
+        Calls.start(this)
+        hourly.run()
         if (!Watch.connected) BLEManager.autoConnect()
+    }
+
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val hourly = object : Runnable {
+        override fun run() { Weather.push(this@WatchService); handler.postDelayed(this, 60 * 60_000L) }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
 
     override fun onDestroy() {
         App.unlisten(onSdk)
+        handler.removeCallbacks(hourly)
         super.onDestroy()
     }
 

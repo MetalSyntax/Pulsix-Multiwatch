@@ -10,7 +10,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/dw_navy"
+        android:background="@color/dw_header"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingHorizontal="20dp"
@@ -62,7 +62,9 @@
         <androidx.core.widget.NestedScrollView
             android:id="@+id/pageHome"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="100dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -162,6 +164,8 @@
             android:id="@+id/pageHealth"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="100dp"
             android:visibility="gone">
 
             <LinearLayout
@@ -205,6 +209,8 @@
             android:id="@+id/pageWatch"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="100dp"
             android:visibility="gone">
 
             <LinearLayout
@@ -231,9 +237,77 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Funciones" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:id="@+id/rowsFeatures" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="6dp" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ajustes" />
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
                     <LinearLayout android:id="@+id/rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="6dp" />
                 </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- ESFERAS -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/pageFaces"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="100dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.card.MaterialCardView style="@style/DW.Card" android:layout_width="match_parent" android:layout_height="wrap_content">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_horizontal" android:orientation="vertical" android:padding="20dp">
+                        <com.metalsyntax.dw26.WatchMock android:id="@+id/currentWatch" android:layout_width="170dp" android:layout_height="wrap_content" />
+                        <TextView android:id="@+id/currentName" style="@style/DW.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" />
+                        <TextView android:id="@+id/facesInfo" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:gravity="center" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mis esferas" />
+                <TextView style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:text="Toca una para usarla · ✕ para quitarla del reloj" />
+
+                <GridLayout
+                    android:id="@+id/facesGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3" />
+
+                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Exclusivas" />
+
+                <GridLayout
+                    android:id="@+id/exclusiveGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3" />
+
+                <TextView android:id="@+id/marketTitle" style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Agregar esferas" />
+
+                <TextView android:id="@+id/marketInfo" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="8dp" />
+
+                <GridLayout
+                    android:id="@+id/marketGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/moreFaces"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="Ver más esferas" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
@@ -276,8 +350,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
-                android:text="Buscar reloj"
-                app:cornerRadius="28dp" />
+                android:text="Buscar reloj" />
 
             <ListView
                 android:id="@+id/devices"
@@ -287,13 +360,30 @@
                 android:divider="@color/dw_line"
                 android:dividerHeight="1dp" />
         </LinearLayout>
-    </FrameLayout>
+        <!-- menú flotante -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/navCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="12dp"
+            app:cardBackgroundColor="@color/dw_surface"
+            app:cardCornerRadius="32dp"
+            app:cardElevation="10dp"
+            app:strokeWidth="0dp">
 
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/nav"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="#FFFFFF"
-        app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
-        app:menu="@menu/bottom_nav" />
+            <com.google.android.material.bottomnavigation.BottomNavigationView
+                android:id="@+id/nav"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:elevation="0dp"
+                app:itemActiveIndicatorStyle="@style/DW.NavIndicator"
+                app:itemIconTint="@color/nav_item"
+                app:itemTextColor="@color/nav_item"
+                app:labelVisibilityMode="labeled"
+                app:menu="@menu/bottom_nav" />
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
 </LinearLayout>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- modo oscuro: mismo azul, aclarado para contraste -->
+    <color name="dw_blue">#5B9BF5</color>
+    <color name="dw_navy">#062B5F</color>
+    <color name="dw_header">#0A1730</color>
+    <color name="dw_sky">#1A2A45</color>
+    <color name="dw_bg">#0A1120</color>
+    <color name="dw_surface">#141D2E</color>
+    <color name="dw_text">#E8EEF7</color>
+    <color name="dw_muted">#8E9BB0</color>
+    <color name="dw_line">#22304A</color>
+    <color name="heart">#FF5C6E</color>
+    <color name="kcal">#FFA040</color>
+    <color name="distance">#2CC9B3</color>
+    <color name="sleep">#8A8AF5</color>
+    <color name="stress">#B585EA</color>
+    <color name="spo2">#45B8F5</color>
+    <color name="ok">#3DDC7C</color>
+</resources>

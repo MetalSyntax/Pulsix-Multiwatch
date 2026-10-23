@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- azul corporativo Daewoo y derivados -->
+    <!-- azul corporativo Daewoo; modo claro -->
     <color name="dw_blue">#0A4DA2</color>
     <color name="dw_navy">#062B5F</color>
-    <color name="dw_sky">#E8F0FA</color>
-    <color name="dw_bg">#F4F7FB</color>
+    <color name="dw_header">#062B5F</color>
+    <color name="dw_sky">#E6EEF9</color>
+    <color name="dw_bg">#F2F5FA</color>
+    <color name="dw_surface">#FFFFFF</color>
     <color name="dw_text">#0E1B2E</color>
     <color name="dw_muted">#5D6B80</color>
-    <color name="dw_line">#DCE4EF</color>
+    <color name="dw_line">#E3E9F2</color>
     <color name="heart">#E5364B</color>
     <color name="kcal">#F28C1B</color>
     <color name="distance">#0A9C8A</color>

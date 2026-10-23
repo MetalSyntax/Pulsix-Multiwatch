@@ -23,6 +23,13 @@ class AdbCommands : BroadcastReceiver() {
             "time" -> BLEManager.setTime()
             "notify" -> NotifListener.send(context.packageName, "DW26", intent.getStringExtra("text") ?: "Prueba")
             "connect" -> BLEManager.autoConnect()
+            "face" -> Faces.exclusive.firstOrNull { it.file == intent.getStringExtra("text") }?.let { Faces.install(context, it) }
+            // tema solo de esta app (no toca el del sistema): night yes|no|auto
+            "night" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(when (intent.getStringExtra("text")) {
+                "yes" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                "no" -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+                else -> androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            })
         }
     }
 }

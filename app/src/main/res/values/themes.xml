@@ -1,26 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.DW26" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.DW26" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/dw_blue</item>
         <item name="colorOnPrimary">#FFFFFF</item>
         <item name="colorPrimaryContainer">@color/dw_sky</item>
         <item name="colorOnPrimaryContainer">@color/dw_navy</item>
         <item name="colorSecondaryContainer">@color/dw_sky</item>
         <item name="colorOnSecondaryContainer">@color/dw_navy</item>
-        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorSurface">@color/dw_surface</item>
+        <item name="colorOnSurface">@color/dw_text</item>
+        <item name="colorSurfaceContainer">@color/dw_surface</item>
+        <item name="colorSurfaceContainerHigh">@color/dw_surface</item>
+        <item name="colorOutline">@color/dw_muted</item>
         <item name="android:colorBackground">@color/dw_bg</item>
-        <item name="android:statusBarColor">@color/dw_navy</item>
+        <item name="android:statusBarColor">@color/dw_header</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:navigationBarColor">@color/dw_bg</item>
+        <item name="android:windowLightNavigationBar">@bool/light_bars</item>
+        <item name="chipStyle">@style/DW.Chip</item>
+        <!-- esquinas redondeadas en todos los componentes -->
+        <item name="shapeAppearanceCornerExtraSmall">@style/DW.Square</item>
+        <item name="shapeAppearanceCornerSmall">@style/DW.Square</item>
+        <item name="shapeAppearanceCornerMedium">@style/DW.Square</item>
+        <item name="shapeAppearanceCornerLarge">@style/DW.Square</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/DW.Square</item>
+        <item name="shapeAppearanceSmallComponent">@style/DW.Square</item>
+        <item name="shapeAppearanceMediumComponent">@style/DW.Square</item>
+        <item name="shapeAppearanceLargeComponent">@style/DW.Square</item>
+    </style>
+
+    <style name="DW.Square" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="DW.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
 
     <style name="DW" />
 
-    <style name="DW.Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardBackgroundColor">#FFFFFF</item>
+    <!-- plano: sin borde ni sombra, solo superficie redondeada -->
+    <style name="DW.Card" parent="Widget.Material3.CardView.Filled">
+        <item name="cardBackgroundColor">@color/dw_surface</item>
         <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">1dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="DW.Chip" parent="Widget.Material3.Chip.Filter">
+        <item name="shapeAppearance">@style/DW.Pill</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipBackgroundColor">@color/chip_bg</item>
+        <item name="android:textColor">@color/chip_text</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="chipMinHeight">40dp</item>
+        <item name="chipStartPadding">10dp</item>
+        <item name="chipEndPadding">10dp</item>
+    </style>
+
+    <style name="DW.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/dw_sky</item>
+        <item name="shapeAppearance">@style/DW.Pill</item>
     </style>
 
     <style name="DW.Label">

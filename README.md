@@ -26,3 +26,17 @@ tools/tap.sh X Y     # toca solo si la app está en primer plano
 ```
 
 Solo una app puede estar vinculada al reloj: con VeryFit activa se pelean la conexión.
+
+## Esferas propias
+
+`tools/faces/pipboy/build.py` genera la esfera **Pip-Boy** (terminal verde fósforo) en el formato
+de esferas IDO del DW26 (pantalla 240×284, `iwf.json` + PNG por glifo) y la deja en
+`app/src/main/assets/faces/pipboy.zip`, que la app instala desde la pestaña Esferas → Exclusivas.
+
+```sh
+python3 -I tools/faces/pipboy/build.py
+```
+
+Tipografía: Share Tech Mono (SIL OFL 1.1, ver `tools/faces/OFL.txt`).
+El reloj guarda las esferas descomprimidas (~300 KB cada una) y tiene poco espacio:
+para agregar una normalmente hay que quitar otra.

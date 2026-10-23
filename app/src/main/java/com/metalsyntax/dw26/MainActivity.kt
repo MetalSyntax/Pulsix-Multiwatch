@@ -9,17 +9,28 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.text.InputType
 import android.text.format.DateUtils
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.EditText
+import android.content.pm.PackageManager
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.FrameLayout
 import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.NotificationManagerCompat
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
+import com.ido.ble.protocol.model.AlarmV3
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.ido.ble.BLEManager
 import com.ido.ble.bluetooth.device.BLEDevice
@@ -48,8 +59,9 @@ class MainActivity : AppCompatActivity() {
 
         b.nav.setOnItemSelectedListener { show(it.itemId); true }
         b.syncBtn.setOnClickListener { Watch.sync(); render() }
+        b.moreFaces.setOnClickListener { Faces.loadMore() }
 
-        tile("hr", R.drawable.ic_heart, R.color.heart, "Ritmo cardíaco")
+        tile("hr", R.drawable.ic_heart, R.color.heart, "Pulso")
         tile("kcal", R.drawable.ic_fire, R.color.kcal, "Calorías")
         tile("dist", R.drawable.ic_route, R.color.distance, "Distancia")
         tile("sleep", R.drawable.ic_moon, R.color.sleep, "Sueño")
@@ -93,6 +105,9 @@ class MainActivity : AppCompatActivity() {
             "BindCallBack.onSuccess" -> { WatchService.start(this); b.nav.selectedItemId = R.id.tab_home }
             "BindCallBack.onFailed", "BindCallBack.onReject" -> toast("No se pudo vincular. Acepta en el reloj e inténtalo de nuevo.")
             "UnbindCallBack.onSuccess" -> stopService(Intent(this, WatchService::class.java))
+            "Faces.installed" -> toast("Esfera instalada")
+            "Faces.failed" -> if (args.firstOrNull() == "sin espacio") askReplace() else toast("No se pudo instalar la esfera: ${args.firstOrNull() ?: ""}")
+            "GetDeviceParaCallBack.onGetAlarmV3" -> if (alarmSheet?.isShowing == true) showAlarms()
         }
         render()
     }
@@ -103,6 +118,11 @@ class MainActivity : AppCompatActivity() {
         b.pageHome.visibility = if (id == R.id.tab_home) View.VISIBLE else View.GONE
         b.pageHealth.visibility = if (id == R.id.tab_health) View.VISIBLE else View.GONE
         b.pageWatch.visibility = if (id == R.id.tab_watch) View.VISIBLE else View.GONE
+        b.pageFaces.visibility = if (id == R.id.tab_faces) View.VISIBLE else View.GONE
+        if (id == R.id.tab_faces) {
+            Faces.refresh()
+            if (Faces.catalog.isEmpty()) Faces.loadMore()
+        }
         render()
     }
 
@@ -111,10 +131,10 @@ class MainActivity : AppCompatActivity() {
     private fun render() {
         val paired = Watch.bound
         b.pagePair.visibility = if (paired) View.GONE else View.VISIBLE
-        b.nav.visibility = if (paired) View.VISIBLE else View.GONE
+        b.navCard.visibility = if (paired) View.VISIBLE else View.GONE
         if (!paired) {
-            b.pageHome.visibility = View.GONE; b.pageHealth.visibility = View.GONE; b.pageWatch.visibility = View.GONE
-        } else if (b.pageHome.visibility != View.VISIBLE && b.pageHealth.visibility != View.VISIBLE && b.pageWatch.visibility != View.VISIBLE) {
+            b.pageHome.visibility = View.GONE; b.pageHealth.visibility = View.GONE; b.pageWatch.visibility = View.GONE; b.pageFaces.visibility = View.GONE
+        } else if (listOf(b.pageHome, b.pageHealth, b.pageWatch, b.pageFaces).none { it.visibility == View.VISIBLE }) {
             b.pageHome.visibility = View.VISIBLE
         }
 
@@ -131,6 +151,7 @@ class MainActivity : AppCompatActivity() {
         renderHome()
         renderHealth()
         renderWatch()
+        if (b.pageFaces.visibility == View.VISIBLE) renderFaces()
     }
 
     private fun renderHome() {
@@ -187,39 +208,68 @@ class MainActivity : AppCompatActivity() {
             else -> "Sin vincular"
         }
         b.watchInfo.text = Watch.mac
-        rowSub("notify", when {
-            !NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName) -> "Falta dar permiso"
-            Watch.notifyEnabled -> "WhatsApp, Telegram, SMS y más"
-            else -> "Desactivadas"
+        val listener = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
+        rowSub("notify", if (!listener) "Falta dar permiso" else if (Watch.notifyEnabled) "WhatsApp, Telegram, SMS y más" else "Desactivadas")
+        rowSub("alarms", when {
+            !Alarms.loaded -> "Toca para ver las alarmas del reloj"
+            Alarms.list.isEmpty() -> "Sin alarmas"
+            else -> Alarms.list.filter { it.isOn_off }.joinToString("  ") { "%02d:%02d".format(it.hour, it.minute) }.ifEmpty { "Todas apagadas" }
         })
-        rowSub("goal", "${fmt(Watch.stepGoal.toLong())} pasos")
-        (rows["notify"]?.findViewById<MaterialSwitch>(R.id.toggle))?.isChecked = Watch.notifyEnabled
+        rowSub("weather", if (!Watch.weatherEnabled) "Desactivado" else Weather.summary ?: "Se actualiza cada hora")
+        rowSub("music", if (!listener) "Necesita el permiso de notificaciones" else if (!Watch.musicEnabled) "Desactivado" else Music.nowPlaying ?: "Muestra la canción y controla la música")
+        rowSub("calls", if (!Calls.granted(this)) "Falta dar permiso" else if (Watch.callsEnabled) "Entrantes y perdidas" else "Desactivadas")
+        toggle("notify", listener && Watch.notifyEnabled)
+        toggle("weather", Watch.weatherEnabled)
+        toggle("music", listener && Watch.musicEnabled)
+        toggle("calls", Calls.granted(this) && Watch.callsEnabled)
+        goalChips?.let { g -> (0 until g.childCount).map { g.getChildAt(it) as Chip }.forEach { it.isChecked = it.tag == Watch.stepGoal } }
     }
 
     // ---------- pantalla Reloj ----------
 
     private val rows = mutableMapOf<String, View>()
+    private var goalChips: ChipGroup? = null
+    private val notifAccess get() = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
 
     private fun buildWatchRows() {
-        row("find", R.drawable.ic_vibrate, "Buscar mi reloj", "Lo hace vibrar") {
-            if (Watch.connected) { BLEManager.startFindDevice(); toast("El reloj está vibrando") } else toast("El reloj no está conectado")
-        }
-        row("sync", R.drawable.ic_sync, "Sincronizar ahora", null) { Watch.sync(); render() }
-        row("time", R.drawable.ic_clock, "Ajustar hora del reloj", "Usa la hora del teléfono") { BLEManager.setTime(); toast("Hora enviada al reloj") }
-        row("notify", R.drawable.ic_bell, "Notificaciones", null, toggle = true) {
-            if (!NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)) {
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        val f = b.rowsFeatures
+        row(f, "alarms", R.drawable.ic_alarm, "Alarmas", null) { Alarms.load(); showAlarms() }
+        row(f, "weather", R.drawable.ic_cloud, "Clima en el reloj", null, toggle = true) {
+            if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 2)
             } else {
-                Watch.notifyEnabled = !Watch.notifyEnabled; render()
+                Watch.weatherEnabled = !Watch.weatherEnabled
+                Weather.push(this)
             }
+            render()
         }
-        row("goal", R.drawable.ic_flag, "Meta diaria de pasos", null) { editGoal() }
-        row("log", R.drawable.ic_bug, "Registro técnico", "Para diagnóstico") {
+        row(f, "music", R.drawable.ic_music, "Música", null, toggle = true) {
+            if (!notifAccess) startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            else { Watch.musicEnabled = !Watch.musicEnabled; Music.onConnected() }
+            render()
+        }
+        row(f, "calls", R.drawable.ic_call_missed, "Llamadas", null, toggle = true) {
+            if (!Calls.granted(this)) requestPermissions(Calls.permissions, 3)
+            else Watch.callsEnabled = !Watch.callsEnabled
+            render()
+        }
+        row(f, "notify", R.drawable.ic_bell, "Notificaciones", null, toggle = true) {
+            if (!notifAccess) startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            else Watch.notifyEnabled = !Watch.notifyEnabled
+            render()
+        }
+
+        val r = b.rows
+        row(r, "find", R.drawable.ic_vibrate, "Buscar mi reloj", "Lo hace vibrar hasta 15 segundos") { findWatch() }
+        row(r, "sync", R.drawable.ic_sync, "Sincronizar ahora", null) { Watch.sync(); render() }
+        row(r, "time", R.drawable.ic_clock, "Ajustar hora del reloj", "Usa la hora del teléfono") { BLEManager.setTime(); toast("Hora enviada al reloj") }
+        goalRow(r)
+        row(r, "log", R.drawable.ic_bug, "Registro técnico", "Para diagnóstico") {
             MaterialAlertDialogBuilder(this).setTitle("Registro técnico")
                 .setMessage(App.history.toList().takeLast(120).joinToString("\n"))
                 .setPositiveButton("Cerrar", null).show()
         }
-        row("unbind", R.drawable.ic_unlink, "Desvincular reloj", null) {
+        row(r, "unbind", R.drawable.ic_unlink, "Desvincular reloj", null) {
             MaterialAlertDialogBuilder(this).setTitle("¿Desvincular el DW26?")
                 .setMessage("El reloj dejará de sincronizarse con este teléfono hasta que lo vuelvas a vincular.")
                 .setPositiveButton("Desvincular") { _, _ -> BLEManager.unbind() }
@@ -227,8 +277,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun row(key: String, icon: Int, title: String, sub: String?, toggle: Boolean = false, onClick: () -> Unit) {
-        val v = layoutInflater.inflate(R.layout.item_row, b.rows, false)
+    private fun row(parent: LinearLayout, key: String, icon: Int, title: String, sub: String?, toggle: Boolean = false, onClick: () -> Unit) {
+        val v = layoutInflater.inflate(R.layout.item_row, parent, false)
         v.findViewById<ImageView>(R.id.icon).setImageResource(icon)
         v.findViewById<TextView>(R.id.title).text = title
         if (toggle) {
@@ -238,7 +288,7 @@ class MainActivity : AppCompatActivity() {
         if (key == "unbind") v.findViewById<TextView>(R.id.title).setTextColor(getColor(R.color.heart))
         v.setOnClickListener { onClick() }
         rows[key] = v
-        b.rows.addView(v)
+        parent.addView(v)
         rowSub(key, sub)
     }
 
@@ -246,15 +296,209 @@ class MainActivity : AppCompatActivity() {
         rows[key]?.findViewById<TextView>(R.id.sub)?.apply { text = sub; visibility = if (sub == null) View.GONE else View.VISIBLE }
     }
 
-    private fun editGoal() {
-        val input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER; setText(Watch.stepGoal.toString()); setSelection(text.length)
+    private fun toggle(key: String, on: Boolean) {
+        rows[key]?.findViewById<MaterialSwitch>(R.id.toggle)?.isChecked = on
+    }
+
+    /** Meta de pasos: fila con chips de valores fijos, sin diálogo. */
+    private fun goalRow(parent: LinearLayout) {
+        row(parent, "goal", R.drawable.ic_flag, "Meta diaria de pasos", null) {}
+        rows["goal"]!!.findViewById<View>(R.id.chevron).visibility = View.GONE
+        val group = ChipGroup(this).apply { isSingleSelection = true; isSelectionRequired = true; chipSpacingHorizontal = dp(8) }
+        listOf(5000, 6000, 8000, 10000, 12000, 15000).forEach { steps ->
+            group.addView(Chip(this, null, com.google.android.material.R.attr.chipStyle).apply {
+                text = fmt(steps.toLong()); tag = steps; isCheckable = true
+                setOnClickListener { Watch.applyStepGoal(steps); render() }
+            })
         }
-        MaterialAlertDialogBuilder(this).setTitle("Meta diaria de pasos").setView(input)
-            .setPositiveButton("Guardar") { _, _ ->
-                input.text.toString().toIntOrNull()?.takeIf { it in 1000..50000 }?.let { Watch.stepGoal = it; render() }
-                    ?: toast("Escribe un número entre 1.000 y 50.000")
+        goalChips = group
+        parent.addView(HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            setPadding(dp(76), 0, dp(20), dp(12)); clipToPadding = false
+            addView(group)
+        })
+    }
+
+    private fun findWatch() {
+        if (!Watch.connected) return toast("El reloj no está conectado")
+        if (Watch.functions?.findDevice == false) return toast("Tu reloj no admite esta función")
+        Watch.findDevice()
+        val d = MaterialAlertDialogBuilder(this).setTitle("Buscando tu reloj…")
+            .setMessage("El DW26 está vibrando. Puedes detenerlo desde el reloj.")
+            .setPositiveButton("Lo encontré") { _, _ -> Watch.stopFindDevice() }
+            .setOnDismissListener { Watch.stopFindDevice() }
+            .show()
+        ticker.postDelayed({ if (d.isShowing) d.dismiss() }, 15_000)
+    }
+
+    // ---------- esferas ----------
+
+    private var facesKey = ""
+    private var marketShown = 0
+
+    private fun renderFaces() {
+        val p = Faces.installed
+        val current = p?.now_show_watch_name?.substringBefore('.')
+        val cur = current?.let { Faces.known[it] }
+        if (b.currentWatch.tag != cur?.image) Faces.load(this, cur?.image, b.currentWatch)
+        b.currentWatch.placeholder = getDrawable(R.drawable.ic_face)?.mutate()?.apply { setTint(0x66FFFFFF) }
+        b.currentName.text = cur?.name ?: current?.let { if (Faces.isBuiltIn(it)) "Esfera integrada" else it } ?: "DW26"
+        b.facesInfo.text = when {
+            Faces.installing != null -> "Instalando «${Faces.installing!!.name}»… ${Faces.progress}%"
+            !Watch.connected -> "Conecta el reloj para ver sus esferas"
+            p == null -> "Leyendo esferas del reloj…"
+            else -> "En uso · ${p.user_cloud_watch_num} de ${p.cloud_watch_num} esferas instaladas"
+        }
+        // reconstruir las grillas solo si cambió algo (evita parpadeo en cada evento)
+        val key = "$current|${p?.item?.joinToString { it.name }}|${Faces.known.size}|${Faces.installing?.file}"
+        if (key != facesKey) {
+            facesKey = key
+            b.facesGrid.removeAllViews()
+            p?.item.orEmpty().forEach { item ->
+                val name = item.name.substringBefore('.')
+                val k = Faces.known[name]
+                val removable = !Faces.isBuiltIn(name) && !Faces.isCurrent(name)
+                faceCell(b.facesGrid, k?.name ?: if (Faces.isBuiltIn(name)) "Integrada" else name, k?.image, Faces.isCurrent(name),
+                    badge = if (removable) R.drawable.badge_delete to R.drawable.ic_close else null,
+                    onBadge = { confirmDelete(item.name, k?.name ?: name) },
+                    onClick = { if (!Faces.isCurrent(name)) { Faces.use(item.name); toast("Cambiando a «${k?.name ?: name}»") } })
             }
+            b.exclusiveGrid.removeAllViews()
+            Faces.exclusive.forEach { f ->
+                val inWatch = p?.item.orEmpty().any { it.name.substringBefore('.') == f.file }
+                faceCell(b.exclusiveGrid, f.name, f.image, Faces.isCurrent(f.file),
+                    badge = if (inWatch) null else R.drawable.badge_add to R.drawable.ic_add,
+                    onBadge = { confirmInstall(f) },
+                    onClick = { if (inWatch) Faces.use("${f.file}.iwf") else confirmInstall(f) })
+            }
+            // celdas vacías para que una sola esfera no ocupe todo el ancho
+            repeat((3 - Faces.exclusive.size % 3) % 3) {
+                b.exclusiveGrid.addView(View(this), GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f) })
+            }
+        }
+        b.marketInfo.text = if (Faces.catalog.isEmpty()) "Cargando catálogo…" else "${Faces.catalogTotal} esferas gratis compatibles con el DW26"
+        if (Faces.catalog.size != marketShown) {
+            Faces.catalog.drop(marketShown).forEach { f ->
+                faceCell(b.marketGrid, f.name, f.image, false, R.drawable.badge_add to R.drawable.ic_add, { confirmInstall(f) }) { confirmInstall(f) }
+            }
+            marketShown = Faces.catalog.size
+        }
+    }
+
+    private fun faceCell(grid: GridLayout, label: String, image: String?, current: Boolean,
+                         badge: Pair<Int, Int>?, onBadge: () -> Unit, onClick: () -> Unit) {
+        val v = layoutInflater.inflate(R.layout.item_face, grid, false)
+        v.layoutParams = GridLayout.LayoutParams(v.layoutParams as ViewGroup.MarginLayoutParams).apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f) }
+        val mock = v.findViewById<WatchMock>(R.id.image)
+        mock.inUse = current
+        mock.placeholder = getDrawable(R.drawable.ic_face)?.mutate()?.apply { setTint(0x66FFFFFF) }
+        Faces.load(this, image, mock)
+        v.findViewById<TextView>(R.id.name).apply {
+            text = label
+            if (current) { setTextColor(getColor(R.color.dw_blue)); setTypeface(typeface, android.graphics.Typeface.BOLD) }
+        }
+        badge?.let { (bg, icon) ->
+            v.findViewById<ImageView>(R.id.badge).apply {
+                visibility = View.VISIBLE; setBackgroundResource(bg); setImageResource(icon); setColorFilter(0xFFFFFFFF.toInt())
+                setOnClickListener { onBadge() }
+            }
+        }
+        v.setOnClickListener { onClick() }
+        grid.addView(v)
+    }
+
+    private fun confirmDelete(file: String, label: String) {
+        MaterialAlertDialogBuilder(this).setTitle("¿Quitar «$label» del reloj?")
+            .setMessage("Libera espacio para otras esferas. Puedes volver a agregarla cuando quieras.")
+            .setPositiveButton("Quitar") { _, _ -> Faces.delete(file); toast("Quitando «$label»…") }
+            .setNegativeButton("Cancelar", null).show()
+    }
+
+    private fun confirmInstall(f: Face) {
+        if (!Watch.connected) return toast("Conecta el reloj primero")
+        if (Faces.installing != null) return toast("Espera a que termine la instalación actual")
+        val mock = WatchMock(this)
+        Faces.load(this, f.image, mock)
+        MaterialAlertDialogBuilder(this).setTitle(f.name)
+            .setView(FrameLayout(this).apply { setPadding(dp(72), dp(8), dp(72), 0); addView(mock) })
+            .setPositiveButton("Agregar al reloj") { _, _ -> lastAttempt = f; Faces.install(this, f); b.pageFaces.scrollTo(0, 0); render() }
+            .setNegativeButton("Cancelar", null).show()
+    }
+
+    private var lastAttempt: Face? = null
+
+    /** El reloj no tiene espacio: elegir cuál esfera reemplazar (como hace VeryFit, pero preguntando). */
+    private fun askReplace() {
+        val f = lastAttempt ?: return
+        val options = Faces.installed?.item.orEmpty().map { it.name }
+            .filter { !Faces.isCurrent(it) && !Faces.isBuiltIn(it) }
+        if (options.isEmpty()) return toast("No hay espacio en el reloj")
+        val labels = options.map { Faces.known[it.substringBefore('.')]?.name ?: it.substringBefore('.') }.toTypedArray()
+        MaterialAlertDialogBuilder(this).setTitle("No hay espacio en el reloj")
+            .setItems(labels) { _, i -> Faces.replace(options[i], f); toast("Reemplazando «${labels[i]}» por «${f.name}»") }
+            .setNegativeButton("Cancelar", null)
+            .show()
+        toast("Elige qué esfera reemplazar por «${f.name}»")
+    }
+
+    // ---------- alarmas ----------
+
+    private var alarmSheet: BottomSheetDialog? = null
+
+    private fun showAlarms() {
+        val sheet = alarmSheet ?: BottomSheetDialog(this).also { alarmSheet = it }
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(20), dp(20), dp(24)) }
+        box.addView(TextView(this, null, 0, R.style.DW_Value).apply { text = "Alarmas" })
+        if (!Watch.connected) box.addView(TextView(this, null, 0, R.style.DW_Label).apply { text = "Conecta el reloj para ver y cambiar sus alarmas." })
+        else if (!Alarms.loaded) box.addView(TextView(this, null, 0, R.style.DW_Label).apply { text = "Leyendo alarmas del reloj…" })
+        else if (Alarms.list.isEmpty()) box.addView(TextView(this, null, 0, R.style.DW_Label).apply { text = "No hay alarmas. Agrega una." })
+        Alarms.list.forEach { a ->
+            val v = layoutInflater.inflate(R.layout.item_row, box, false)
+            v.setPadding(0, 0, 0, 0)
+            v.findViewById<ImageView>(R.id.icon).setImageResource(R.drawable.ic_alarm)
+            v.findViewById<TextView>(R.id.title).apply { text = "%02d:%02d".format(a.hour, a.minute); textSize = 24f }
+            v.findViewById<TextView>(R.id.sub).apply { text = Alarms.days(a); visibility = View.VISIBLE }
+            v.findViewById<View>(R.id.chevron).visibility = View.GONE
+            v.findViewById<MaterialSwitch>(R.id.toggle).apply {
+                visibility = View.VISIBLE; isChecked = a.isOn_off
+                setOnCheckedChangeListener { _, on -> a.setOn_off(on); Alarms.save(Alarms.list) }
+            }
+            v.setOnClickListener { editAlarm(a) }
+            box.addView(v)
+        }
+        if (Watch.connected && Alarms.loaded && Alarms.list.size < Alarms.MAX) {
+            box.addView(MaterialButton(this).apply {
+                text = "Agregar alarma"; setIconResource(R.drawable.ic_add)
+                layoutParams = LinearLayout.LayoutParams(-1, dp(56)).apply { topMargin = dp(16) }
+                setOnClickListener { pickTime(7, 0) { h, m -> pickDays(Alarms.new(h, m)) { Alarms.save(Alarms.list + it) } } }
+            })
+        }
+        sheet.setContentView(ScrollView(this).apply { addView(box) })
+        if (!sheet.isShowing) sheet.show()
+    }
+
+    private fun editAlarm(a: AlarmV3) {
+        MaterialAlertDialogBuilder(this).setTitle("%02d:%02d".format(a.hour, a.minute))
+            .setItems(arrayOf("Cambiar hora", "Repetir", "Eliminar")) { _, which ->
+                when (which) {
+                    0 -> pickTime(a.hour, a.minute) { h, m -> a.hour = h; a.minute = m; Alarms.save(Alarms.list) }
+                    1 -> pickDays(a) { Alarms.save(Alarms.list) }
+                    2 -> Alarms.save(Alarms.list - a)
+                }
+            }.show()
+    }
+
+    private fun pickTime(h: Int, m: Int, done: (Int, Int) -> Unit) {
+        MaterialTimePicker.Builder().setTimeFormat(TimeFormat.CLOCK_24H).setHour(h).setMinute(m).setTitleText("Hora de la alarma").build()
+            .apply { addOnPositiveButtonClickListener { done(hour, minute) } }
+            .show(supportFragmentManager, "time")
+    }
+
+    private fun pickDays(a: AlarmV3, done: (AlarmV3) -> Unit) {
+        val days = a.weekRepeat.copyOf()
+        MaterialAlertDialogBuilder(this).setTitle("Repetir")
+            .setMultiChoiceItems(arrayOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"), days) { _, i, on -> days[i] = on }
+            .setPositiveButton("Listo") { _, _ -> a.setWeekRepeat(days); done(a) }
             .setNegativeButton("Cancelar", null).show()
     }
 
@@ -293,7 +537,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun tile(key: String, icon: Int, color: Int, label: String) {
         val v = layoutInflater.inflate(R.layout.item_tile, b.tiles, false)
-        v.layoutParams = GridLayout.LayoutParams(v.layoutParams).apply {
+        v.layoutParams = GridLayout.LayoutParams(v.layoutParams as ViewGroup.MarginLayoutParams).apply {
             width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
         }
         v.findViewById<ImageView>(R.id.icon).apply { setImageResource(icon); setColorFilter(getColor(color)) }
@@ -308,6 +552,7 @@ class MainActivity : AppCompatActivity() {
         v.findViewById<TextView>(R.id.sub).apply { text = sub ?: " " }
     }
 
+    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun fmt(n: Long) = "%,d".format(es, n)
     private fun hm(min: Int) = "${min / 60} h ${min % 60} min"
     private fun stressLabel(v: Int) = when { v < 30 -> "Relajado"; v < 60 -> "Normal"; v < 80 -> "Moderado"; else -> "Alto" }

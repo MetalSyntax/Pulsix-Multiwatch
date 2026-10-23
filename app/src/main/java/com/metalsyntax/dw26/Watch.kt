@@ -12,7 +12,11 @@ import com.ido.ble.business.sync.ISyncDataListener
 import com.ido.ble.business.sync.ISyncProgressListener
 import com.ido.ble.business.sync.SyncPara
 import com.ido.ble.callback.DeviceControlAppCallBack.DeviceControlEventType
+import com.ido.ble.protocol.model.AlarmV3
 import com.ido.ble.protocol.model.BatteryInfo
+import com.ido.ble.protocol.model.DeviceChangedPara
+import com.ido.ble.protocol.model.Goal
+import com.ido.ble.protocol.model.SupportFunctionInfo
 import com.ido.ble.protocol.model.LiveData
 
 /** Estado del reloj y reacciones automáticas a lo que manda. Todo corre en el hilo principal. */
@@ -34,10 +38,50 @@ object Watch {
     val mac: String get() = prefs.getString("mac", "") ?: ""
     var stepGoal: Int
         get() = prefs.getInt("step_goal", 8000)
-        set(v) = prefs.edit().putInt("step_goal", v).apply()
+        private set(v) = prefs.edit().putInt("step_goal", v).apply()
     var notifyEnabled: Boolean
         get() = prefs.getBoolean("notify", true)
         set(v) = prefs.edit().putBoolean("notify", v).apply()
+    var musicEnabled: Boolean
+        get() = prefs.getBoolean("music", true)
+        set(v) = prefs.edit().putBoolean("music", v).apply()
+    var callsEnabled: Boolean
+        get() = prefs.getBoolean("calls", true)
+        set(v) = prefs.edit().putBoolean("calls", v).apply()
+    /** Tabla de funciones que reporta el reloj (null hasta la primera conexión). */
+    var functions: SupportFunctionInfo? = null; private set
+    var finding = false; private set
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val stopFind = Runnable { stopFindDevice() }
+
+    /** Como VeryFit: vibra hasta 15 s o hasta que se apague desde el reloj o la app. */
+    fun findDevice() {
+        if (!connected) return
+        finding = true
+        BLEManager.startFindDevice()
+        handler.removeCallbacks(stopFind)
+        handler.postDelayed(stopFind, 15_000)
+    }
+
+    fun stopFindDevice() {
+        handler.removeCallbacks(stopFind)
+        if (finding) { finding = false; BLEManager.stopFindDevice() }
+    }
+
+    var weatherEnabled: Boolean
+        get() = prefs.getBoolean("weather", true)
+        set(v) = prefs.edit().putBoolean("weather", v).apply()
+
+    /** Meta de pasos en la app y en el reloj (setGoal, igual que VeryFit). */
+    fun applyStepGoal(steps: Int) {
+        stepGoal = steps
+        val goal = Goal().apply {
+            sport_step = steps; walk_goal_steps = steps; target_type = 1
+            achieved_remind_on_off = 170 // 170 = aviso al cumplir la meta activado
+            set_step_time = System.currentTimeMillis() / 1000
+        }
+        if (connected) BLEManager.setGoal(goal) else BLEManager.setGoalPending(goal)
+    }
 
     fun init(c: Context) {
         ctx = c
@@ -67,6 +111,11 @@ object Watch {
             "ConnectCallBack.onConnectSuccess" -> prefs.edit().putString("mac", args[0] as String).apply()
             "ConnectCallBack.onInitCompleted" -> {
                 refresh()
+                Alarms.load()
+                BLEManager.getFunctionTables()
+                Faces.refresh()
+                Music.onConnected()
+                Weather.push(ctx)
                 // ponytail: sincroniza al conectar si pasaron 15 min; sin tarea periódica en segundo plano
                 if (System.currentTimeMillis() - lastSync > 15 * 60_000) sync()
             }
@@ -86,6 +135,14 @@ object Watch {
                 lastSync = System.currentTimeMillis()
                 BLEManager.getLiveData()
             }
+            "GetDeviceInfoCallBack.onGetFunctionTable" -> functions = args[0] as SupportFunctionInfo
+            // dataType 34 = el usuario apagó en el reloj la búsqueda
+            "DeviceParaChangedCallBack.onChanged" -> if ((args[0] as DeviceChangedPara).dataType == 34) { finding = false; handler.removeCallbacks(stopFind) }
+            "WatchPlateCallBack.onGetDialPlateParam" -> Faces.onInstalled(args[0] as com.ido.ble.watch.custom.model.DialPlateParam)
+            "WatchPlateCallBack.onSetPlate" -> Faces.refresh()
+            "WatchPlateCallBack.onDeletePlate" -> { Faces.refresh(); Faces.onDeleted(ctx, args[0] as Boolean) }
+            "GetDeviceParaCallBack.onGetAlarmV3" -> @Suppress("UNCHECKED_CAST") Alarms.onLoaded(args[0] as List<AlarmV3>)
+            "SettingCallBack.onSuccess" -> if (args[0].toString() == "ALARM_V3") Alarms.load()
             "DeviceControlAppCallBack.onFindPhone" -> findPhone(args[0] as Boolean)
             "DeviceControlAppCallBack.onControlEvent" -> media(args[0] as DeviceControlEventType)
         }
