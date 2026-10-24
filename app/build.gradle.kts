@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -11,8 +13,11 @@ android {
         applicationId = "com.metalsyntax.dw26"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = 5
+        versionName = "0.5"
+        // clave de VeryFit para el catálogo de esferas: la escribe tools/extract_sdk.sh (no se versiona)
+        val ido = Properties().apply { rootProject.file("ido.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) } }
+        buildConfigField("String", "IDO_APP_KEY", "\"${ido.getProperty("ido.appKey", "")}\"")
         // la .so de VeryFit solo se sacó para arm64
         ndk { abiFilters += listOf("arm64-v8a") }
     }
@@ -35,6 +40,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     packaging {

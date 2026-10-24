@@ -28,7 +28,8 @@ data class Face(val id: Int, val name: String, val file: String, val image: Stri
  */
 object Faces {
     private const val BASE = "https://device.idoocloud.com"
-    private const val APP_KEY = "" // clave pública de la app VeryFit
+    /** clave pública de la app VeryFit; la saca tools/extract_sdk.sh del APK (no se versiona) */
+    private val APP_KEY = BuildConfig.IDO_APP_KEY
     private const val DEVICE_ID = 8117
     private const val FACE_VERSION = 6 // BasicInfo.user_defined_dial_main_version del DW26
     private val main = Handler(Looper.getMainLooper())
@@ -72,6 +73,7 @@ object Faces {
     /** Siguiente página del catálogo gratis. */
     fun loadMore() = thread {
         runCatching {
+            check(APP_KEY.isNotEmpty()) { "falta ido.properties: corre tools/extract_sdk.sh" }
             val page = catalog.size / 30 + 1
             val r = JSONObject(http("$BASE/api/device/facestore/free/get?" + common() + "&pageId=$page&pageSize=30", "POST", ""))
                 .getJSONObject("result")
