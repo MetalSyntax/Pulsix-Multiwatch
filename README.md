@@ -1,6 +1,6 @@
 <h1 align="center">
-  <img src="docs/pipboy-face.png" alt="Pip-Boy watch face" width="180"><br>
-  DW26 Watch · Smartwatch companion app for Android
+  <img src="docs/icon.png" alt="Pulsix icon" width="140"><br>
+  Pulsix · Smartwatch companion app for Android
 </h1>
 
 <p align="center">
@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://metalsyntax.github.io/Pulsix-Multiwatch/">Website</a> •
   <a href="#-status">Status</a> •
   <a href="#-supported-devices">Devices</a> •
   <a href="#-install">How to install</a> •
@@ -20,7 +21,7 @@
   <a href="#credits--acknowledgments">Credits</a>
 </p>
 
-**DW26 Watch** is a clean, ad-free replacement for the stock companion app of the **Daewoo DW26** smartwatch. It pairs with the watch over Bluetooth LE and handles health data, notifications, calls, music, weather, alarms and watch faces — including faces designed from scratch, like a green-phosphor **Pip-Boy** terminal. No account and no tracking: the only network calls are the weather forecast and the optional watch-face catalog.
+**Pulsix** (*pulso* + x, like its sibling [Mandix](https://github.com/MetalSyntax/Mandix-Multicontrol)) is a clean, ad-free replacement for the stock companion app of the **Daewoo DW26** smartwatch. It pairs with the watch over Bluetooth LE and handles health data, notifications, calls, music, weather, alarms and watch faces — including faces designed from scratch, like a green-phosphor **Pip-Boy** terminal. No account and no tracking: the only network calls are the weather forecast and the optional watch-face catalog.
 
 The DW26 runs on the **IDO** platform (the same one behind the *VeryFit* app), so the app talks to it through IDO's SDK, which each user extracts from their own VeryFit install. Support for more watches is planned.
 
@@ -59,7 +60,7 @@ The DW26 runs on the **IDO** platform (the same one behind the *VeryFit* app), s
 | Other watches that use the **VeryFit** app | IDO | ❔ Likely partial support, untested |
 
 > [!NOTE]
-> Only one app can be bound to the watch at a time. Pairing with DW26 Watch unbinds VeryFit, and vice versa — sync in VeryFit first so no data is lost.
+> Only one app can be bound to the watch at a time. Pairing with Pulsix unbinds VeryFit, and vice versa — sync in VeryFit first so no data is lost.
 
 ---
 
@@ -113,8 +114,8 @@ The face format is a zip with an `iwf.json` layout (positioned widgets: time, se
 ### Compilation Commands
 
 ```bash
-git clone https://github.com/MetalSyntax/DW26-Watch.git
-cd DW26-Watch
+git clone https://github.com/MetalSyntax/Pulsix-Multiwatch.git
+cd Pulsix-Multiwatch
 
 # extract IDO's SDK, native libs and catalog key from YOUR VeryFit install
 tools/extract_sdk.sh                                           # phone connected by adb
