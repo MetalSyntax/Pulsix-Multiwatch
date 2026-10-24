@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DW26 Watch – App para el smartwatch Daewoo DW26</title>
+<meta name="description" content="App Android para el smartwatch Daewoo DW26: salud, notificaciones, llamadas, música, clima, alarmas y esferas propias como una Pip-Boy. Sin cuentas ni anuncios.">
+<meta property="og:title" content="DW26 Watch – Tu smartwatch, sin la app del fabricante">
+<meta property="og:description" content="Salud, notificaciones, música, clima, alarmas y esferas propias para el Daewoo DW26. Sin cuentas, sin anuncios, código abierto.">
+<meta property="og:image" content="https://metalsyntax.github.io/DW26-Watch/banner.png">
+<link rel="icon" href="icon.png">
+<style>
+  :root { --bg:#070D19; --card:#101A2C; --line:#1E2B44; --text:#E8EEF7; --muted:#8E9BB0; --blue:#5B9BF5; --deep:#0A4DA2; --green:#1AFF80; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--text); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--blue); }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 16px; }
+  nav { display:flex; justify-content:space-between; align-items:center; padding:18px 0; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:20px; color:var(--text); text-decoration:none; }
+  .brand img { width:36px; height:36px; border-radius:9px; }
+  .lang { background:none; border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:6px 14px; cursor:pointer; font:inherit; font-size:14px; }
+  .hero { display:grid; grid-template-columns:1.05fr .95fr; gap:40px; align-items:center; padding:48px 0 64px; }
+  h1 { font-size:clamp(34px,5vw,54px); line-height:1.1; letter-spacing:-.02em; }
+  h1 span { color:var(--blue); }
+  .lead { color:var(--muted); font-size:18px; margin:18px 0 28px; }
+  .btns { display:flex; flex-wrap:wrap; gap:12px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:14px 22px; border-radius:999px; font-weight:700; text-decoration:none; }
+  .primary { background:var(--deep); color:#fff; box-shadow:0 4px 0 #062B5F; }
+  .primary:hover { transform:translateY(1px); box-shadow:0 3px 0 #062B5F; }
+  .ghost { border:1px solid var(--line); color:var(--text); }
+  .meta { color:var(--muted); font-size:14px; margin-top:14px; }
+  .phones { display:flex; gap:16px; justify-content:center; }
+  .phones img { width:47%; max-width:230px; border-radius:24px; border:1px solid var(--line); box-shadow:0 20px 40px rgba(0,0,0,.45); }
+  .phones img:last-child { margin-top:40px; }
+  h2 { font-size:28px; margin-bottom:24px; }
+  section { padding:40px 0; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; }
+  .card { background:var(--card); border-radius:16px; padding:22px; }
+  .card .ico { font-size:28px; }
+  .card h3 { font-size:18px; margin:8px 0 6px; }
+  .card p { color:var(--muted); font-size:15px; }
+  .faces { display:grid; grid-template-columns:auto 1fr; gap:40px; align-items:center; }
+  /* reloj DW26 dibujado: cuerpo, corona y pantalla 240×284 */
+  .watch { position:relative; width:220px; padding:16px; border-radius:52px; background:linear-gradient(#2C3340,#161A21); box-shadow:0 24px 48px rgba(0,0,0,.5); }
+  .watch::after { content:""; position:absolute; right:-9px; top:30%; width:12px; height:14%; border-radius:6px; background:#2C3340; }
+  .watch img { display:block; width:100%; border-radius:36px; }
+  .faces h3 { font-size:22px; margin-bottom:8px; }
+  .faces p { color:var(--muted); }
+  .faces code { color:var(--green); }
+  ol.steps { counter-reset:s; list-style:none; padding:0; display:grid; gap:12px; }
+  ol.steps li { counter-increment:s; background:var(--card); border-radius:14px; padding:16px 18px 16px 62px; position:relative; }
+  ol.steps li::before { content:counter(s); position:absolute; left:16px; top:14px; width:30px; height:30px; border-radius:50%; background:var(--deep); color:#fff; font-weight:700; display:grid; place-items:center; }
+  pre { background:#050912; border-radius:12px; padding:14px 16px; overflow-x:auto; margin-top:10px; font-size:14px; color:#CFE0F7; }
+  .note { border-left:3px solid var(--blue); background:var(--card); padding:14px 18px; border-radius:0 12px 12px 0; color:var(--muted); margin-top:20px; }
+  footer { border-top:1px solid var(--line); color:var(--muted); font-size:14px; padding:28px 0 40px; margin-top:32px; }
+  [data-en] { display:none; }
+  html[lang=en] [data-es] { display:none; }
+  html[lang=en] [data-en] { display:revert; }
+  @media (max-width:760px) { .hero, .faces { grid-template-columns:1fr; padding-top:16px; } .watch { margin:0 auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="#"><img src="icon.png" alt="">DW26 Watch</a>
+    <button class="lang" id="lang" type="button" aria-label="Cambiar idioma / Switch language">EN</button>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1 data-es>Tu smartwatch, <span>sin la app del fabricante</span>.</h1>
+      <h1 data-en>Your smartwatch, <span>without the stock app</span>.</h1>
+      <p class="lead" data-es>DW26 Watch conecta tu Daewoo DW26 por Bluetooth y se encarga de todo: salud, notificaciones, llamadas, música, clima, alarmas y esferas. Sin cuentas, sin anuncios, sin rastreo.</p>
+      <p class="lead" data-en>DW26 Watch pairs with your Daewoo DW26 over Bluetooth and handles everything: health, notifications, calls, music, weather, alarms and watch faces. No accounts, no ads, no tracking.</p>
+      <div class="btns">
+        <a class="btn primary" href="https://github.com/MetalSyntax/DW26-Watch">GitHub</a>
+        <a class="btn ghost" href="#install"><span data-es>Cómo instalar</span><span data-en>How to install</span></a>
+      </div>
+      <p class="meta" data-es>v0.5 · Android 8.0+ · Gratis y de código abierto</p>
+      <p class="meta" data-en>v0.5 · Android 8.0+ · Free &amp; open source</p>
+    </div>
+    <div class="phones">
+      <img src="home.png" alt="Inicio / Home">
+      <img src="faces.png" alt="Esferas / Watch faces">
+    </div>
+  </header>
+
+  <section>
+    <h2 data-es>Qué hace</h2><h2 data-en>What it does</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">❤️</div>
+        <h3 data-es>Salud diaria</h3><h3 data-en>Daily health</h3>
+        <p data-es>Pasos con meta, pulso, calorías, distancia, sueño por fases, estrés y SpO₂, con gráficos de 7 días.</p>
+        <p data-en>Steps vs. goal, heart rate, calories, distance, sleep stages, stress and SpO₂, with 7-day charts.</p></div>
+      <div class="card"><div class="ico">🔔</div>
+        <h3 data-es>Notificaciones y llamadas</h3><h3 data-en>Notifications &amp; calls</h3>
+        <p data-es>WhatsApp, Telegram, SMS y más en la muñeca, con el nombre de quien llama y avisos de llamadas perdidas.</p>
+        <p data-en>WhatsApp, Telegram, SMS and more on your wrist, with caller names and missed-call alerts.</p></div>
+      <div class="card"><div class="ico">🎵</div>
+        <h3 data-es>Música</h3><h3 data-en>Music</h3>
+        <p data-es>Canción y artista en el reloj; reproducir, pausar, saltar y volumen desde la muñeca.</p>
+        <p data-en>Song and artist on the watch; play, pause, skip and volume from your wrist.</p></div>
+      <div class="card"><div class="ico">⛅</div>
+        <h3 data-es>Clima</h3><h3 data-en>Weather</h3>
+        <p data-es>Actual, por horas y de 6 días según tu ubicación, actualizado cada hora (Open-Meteo, sin claves).</p>
+        <p data-en>Current, hourly and 6-day forecast for your location, refreshed hourly (Open-Meteo, no keys).</p></div>
+      <div class="card"><div class="ico">⏰</div>
+        <h3 data-es>Alarmas</h3><h3 data-en>Alarms</h3>
+        <p data-es>Hasta 10 alarmas con días de repetición, sincronizadas en ambos sentidos.</p>
+        <p data-en>Up to 10 alarms with repeat days, synced both ways.</p></div>
+      <div class="card"><div class="ico">📳</div>
+        <h3 data-es>Buscar reloj y teléfono</h3><h3 data-en>Find watch &amp; phone</h3>
+        <p data-es>Haz vibrar el reloj desde la app, o haz sonar el teléfono desde el reloj.</p>
+        <p data-en>Make the watch vibrate from the app, or ring the phone from the watch.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-es>Esferas, incluso hechas a mano</h2><h2 data-en>Watch faces, even hand-made ones</h2>
+    <div class="faces">
+      <div class="watch"><img src="pipboy-face.png" alt="Pip-Boy"></div>
+      <div>
+        <h3>Pip-Boy</h3>
+        <p data-es>Una terminal verde fósforo con líneas de barrido CRT: hora, fecha, pulso (HP), batería (AP), pasos, calorías y temperatura, todo en vivo en el reloj. Se genera con un script, así que puedes editarla o crear las tuyas.</p>
+        <p data-en>A green-phosphor terminal with CRT scanlines: time, date, heart rate (HP), battery (AP), steps, calories and temperature, live on the watch. It's generated by a script, so you can tweak it or build your own.</p>
+        <pre>python3 -I tools/faces/pipboy/build.py</pre>
+        <p class="meta" data-es>Además: más de 250 esferas gratis del catálogo, vistas dentro de un DW26 simulado, para agregar o quitar con un toque.</p>
+        <p class="meta" data-en>Plus 250+ free catalog faces, previewed inside a simulated DW26, added or removed with one tap.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-es>Hecha para usarse a diario</h2><h2 data-en>Built for daily use</h2>
+    <div class="grid">
+      <div class="card"><div class="ico">🔗</div>
+        <h3 data-es>Siempre conectada</h3><h3 data-en>Always connected</h3>
+        <p data-es>Un servicio mantiene el enlace y reconecta solo; sincroniza al conectar.</p>
+        <p data-en>A background service keeps the link and reconnects on its own; syncs on connect.</p></div>
+      <div class="card"><div class="ico">🌗</div>
+        <h3 data-es>Claro, oscuro y negro</h3><h3 data-en>Light, dark &amp; black</h3>
+        <p data-es>Diseño plano y minimalista, con un modo negro puro para pantallas AMOLED.</p>
+        <p data-en>Flat, minimal design with a pure black mode for AMOLED screens.</p></div>
+      <div class="card"><div class="ico">🔒</div>
+        <h3 data-es>Sin cuenta</h3><h3 data-en>No account</h3>
+        <p data-es>Tus datos de salud se quedan en el teléfono. Sin registro, sin anuncios.</p>
+        <p data-en>Your health data stays on the phone. No sign-up, no ads.</p></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2 data-es>Instalación</h2><h2 data-en>Install</h2>
+    <ol class="steps">
+      <li data-es>Instala <b>VeryFit</b> (la app oficial) en tu Android y conéctalo a la computadora por <code>adb</code>. De ahí salen las librerías del reloj, que no se pueden redistribuir.</li>
+      <li data-en>Install <b>VeryFit</b> (the stock app) on your Android and connect it to your computer with <code>adb</code>. The watch libraries come from there and can't be redistributed.</li>
+      <li data-es>Clona el repositorio, extrae las librerías y compila:<pre>git clone https://github.com/MetalSyntax/DW26-Watch.git
+cd DW26-Watch
+tools/extract_sdk.sh
+./gradlew assembleDebug</pre></li>
+      <li data-en>Clone the repo, extract the libraries and build:<pre>git clone https://github.com/MetalSyntax/DW26-Watch.git
+cd DW26-Watch
+tools/extract_sdk.sh
+./gradlew assembleDebug</pre></li>
+      <li data-es>Instala el APK, toca <b>Buscar reloj</b> con la pantalla del reloj encendida y acepta la vinculación en el reloj.</li>
+      <li data-en>Install the APK, tap <b>Buscar reloj</b> (Search watch) with the watch screen on and accept pairing on the watch.</li>
+    </ol>
+    <p class="note" data-es>Solo una app puede estar vinculada al reloj: al usar DW26 Watch, VeryFit queda desvinculada. Sincroniza en VeryFit antes de cambiar.</p>
+    <p class="note" data-en>Only one app can be bound to the watch: using DW26 Watch unbinds VeryFit. Sync in VeryFit before switching.</p>
+  </section>
+
+  <footer>
+    <span data-es>DW26 Watch · Licencia MIT · por <a href="https://github.com/MetalSyntax">MetalSyntax</a>. Proyecto no oficial: no está afiliado a Daewoo, IDO ni Bethesda; las marcas pertenecen a sus dueños.</span>
+    <span data-en>DW26 Watch · MIT License · by <a href="https://github.com/MetalSyntax">MetalSyntax</a>. Unofficial project: not affiliated with Daewoo, IDO or Bethesda; trademarks belong to their owners.</span>
+  </footer>
+</div>
+<script>
+  const btn = document.getElementById('lang');
+  function setLang(l) {
+    document.documentElement.lang = l;
+    btn.textContent = l === 'es' ? 'EN' : 'ES';
+    try { localStorage.setItem('lang', l); } catch (e) {}
+  }
+  let saved = null;
+  try { saved = localStorage.getItem('lang'); } catch (e) {}
+  setLang(saved || (navigator.language.startsWith('es') ? 'es' : 'en'));
+  btn.onclick = () => setLang(document.documentElement.lang === 'es' ? 'en' : 'es');
+</script>
+</body>
+</html>
