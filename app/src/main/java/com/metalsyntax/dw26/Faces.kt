@@ -28,8 +28,7 @@ data class Face(val id: Int, val name: String, val file: String, val image: Stri
  */
 object Faces {
     private const val BASE = "https://device.idoocloud.com"
-    /** clave pública de la app VeryFit; la saca tools/extract_sdk.sh del APK (no se versiona) */
-    private val APP_KEY = BuildConfig.IDO_APP_KEY
+    private val APP_KEY get() = VeryFit.appKey
     private const val DEVICE_ID = 8117
     private const val FACE_VERSION = 6 // BasicInfo.user_defined_dial_main_version del DW26
     private val main = Handler(Looper.getMainLooper())

@@ -53,6 +53,19 @@ class MainActivity : AppCompatActivity() {
     private val onSdk: SdkListener = { method, args -> handle(method, args) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (!App.sdkReady) {
+            super.onCreate(savedInstanceState)
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Falta VeryFit")
+                .setMessage("Pulsix usa el SDK del reloj que viene dentro de la app VeryFit. Instala VeryFit (com.sport.fitplus1) desde Google Play y vuelve a abrir Pulsix; puedes desactivarla después.")
+                .setPositiveButton("Abrir Play Store") { _, _ ->
+                    runCatching { startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=${VeryFit.PKG}"))) }
+                    finish()
+                }
+                .setNegativeButton("Salir") { _, _ -> finish() }
+                .setCancelable(false).show()
+            return
+        }
         if (Watch.theme == "black") setTheme(R.style.Theme_DW26_Black)
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)

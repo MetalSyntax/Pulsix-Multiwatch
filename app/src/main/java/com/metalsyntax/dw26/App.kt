@@ -16,8 +16,14 @@ typealias SdkListener = (method: String, args: List<Any?>) -> Unit
 
 class App : Application() {
 
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(base)
+        sdkReady = VeryFit.load(base)
+    }
+
     override fun onCreate() {
         super.onCreate()
+        if (!sdkReady) return
         BLEManager.onApplicationCreate(this)
         BLEManager.init(InitParam().apply {
             databaseName = "dw26.db"
@@ -52,6 +58,8 @@ class App : Application() {
 
     companion object {
         const val TAG = "DW26"
+        /** false = no hay SDK (release sin VeryFit instalada): MainActivity solo avisa */
+        var sdkReady = false; private set
         val gson = Gson()
         private val main = Handler(Looper.getMainLooper())
         private val listeners = mutableListOf<SdkListener>()

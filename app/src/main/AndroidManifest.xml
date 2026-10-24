@@ -23,6 +23,11 @@
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
+    <!-- el release carga el SDK desde el APK de VeryFit -->
+    <queries>
+        <package android:name="com.sport.fitplus1" />
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="false"

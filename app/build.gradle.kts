@@ -26,6 +26,10 @@ android {
         release {
             // el SDK de IDO va sin reglas de keep: no minificar
             isMinifyEnabled = false
+            // redistribuible: sin SDK ni clave de VeryFit (se cargan de la VeryFit instalada, ver VeryFit.kt)
+            buildConfigField("String", "IDO_APP_KEY", "\"\"")
+            // firmado con la clave debug, igual que los releases de Mandix
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -43,6 +47,12 @@ android {
         buildConfig = true
     }
 
+    // las .so de VeryFit solo van en debug
+    sourceSets {
+        getByName("main").jniLibs.setSrcDirs(emptyList<String>())
+        getByName("debug").jniLibs.srcDir("src/main/jniLibs")
+    }
+
     packaging {
         // libVeryFitMulti.so se carga con System.loadLibrary: extraída en disco como en VeryFit
         jniLibs.useLegacyPackaging = true
@@ -51,7 +61,9 @@ android {
 
 dependencies {
     // SDK de IDO sacado del APK de VeryFit (idoble.jar) + sus dependencias en las mismas versiones (ido-deps.jar)
-    implementation(fileTree("libs") { include("*.jar") })
+    // debug los incluye; release solo compila contra ellos y los toma de VeryFit en ejecución
+    debugImplementation(fileTree("libs") { include("*.jar") })
+    releaseCompileOnly(fileTree("libs") { include("*.jar") })
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
