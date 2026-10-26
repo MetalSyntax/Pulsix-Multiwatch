@@ -274,8 +274,8 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mis esferas" />
-                <TextView style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:text="Toca una para usarla · ✕ para quitarla del reloj" />
+                <TextView android:id="@+id/mineTitle" style="@style/DW.Section" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Mis esferas" />
+                <TextView android:id="@+id/mineHint" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:text="Toca una para usarla · ✕ para quitarla del reloj" />
 
                 <GridLayout
                     android:id="@+id/facesGrid"

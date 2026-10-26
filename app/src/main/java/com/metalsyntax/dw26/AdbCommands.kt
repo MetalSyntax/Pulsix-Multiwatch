@@ -33,7 +33,8 @@ class AdbCommands : BroadcastReceiver() {
             }
             "fitfind" -> FitCloud.find()
             "fitinfo" -> FitCloud.refresh()
-            "fitdial" -> FitCloud.installDial(context, intent.getStringExtra("text") ?: return)
+            "fitdial" -> (intent.getStringExtra("text") ?: return).let { FitCloud.installDial(context, it, java.io.File(it).nameWithoutExtension) }
+            "fitsync" -> FitCloud.sync()
             "theme" -> { Watch.theme = intent.getStringExtra("text") ?: "auto"; App.applyTheme() } // auto|light|dark|black
         }
     }

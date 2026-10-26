@@ -32,29 +32,44 @@ data class Day(
     var hrAvg: Int = 0,
     /** pares [segundo del día, bpm] */
     var hrPoints: List<IntArray> = emptyList(),
+    /** FitCloud manda pasos por intervalos y solo una vez: [inicio en s] → [pasos, metros, kcal] para no sumar dos veces */
+    var stepParts: Map<String, IntArray>? = null,
     var stressAvg: Int = 0,
     var spo2Avg: Int = 0,
 )
 
+/** Historial por reloj: "ido" (DW26, el health.json de siempre) o la MAC de un reloj FitCloud. */
 object Health {
-    private lateinit var file: File
-    private val days = sortedMapOf<String, Day>()
+    private lateinit var dir: File
+    private val stores = mutableMapOf<String, java.util.SortedMap<String, Day>>()
 
-    fun init(ctx: Context) {
-        file = File(ctx.filesDir, "health.json")
-        runCatching {
-            val type = object : TypeToken<Map<String, Day>>() {}.type
-            days.putAll(App.gson.fromJson<Map<String, Day>>(file.readText(), type))
+    fun init(ctx: Context) { dir = ctx.filesDir }
+
+    private fun file(key: String) = File(dir, if (key == IDO) "health.json" else "health-${key.replace(":", "")}.json")
+
+    private fun store(key: String) = stores.getOrPut(key) {
+        sortedMapOf<String, Day>().apply {
+            runCatching {
+                val type = object : TypeToken<Map<String, Day>>() {}.type
+                putAll(App.gson.fromJson<Map<String, Day>>(file(key).readText(), type))
+            }
         }
     }
 
-    fun day(d: LocalDate): Day? = days[d.toString()]
+    /** Día del reloj del perfil activo. */
+    fun day(d: LocalDate): Day? = store(Profiles.active?.let { if (it.daewoo) IDO else it.mac } ?: IDO)[d.toString()]
+
+    fun edit(key: String, date: LocalDate, block: Day.() -> Unit) {
+        val days = store(key)
+        days.getOrPut(date.toString()) { Day() }.block()
+        file(key).writeText(App.json(days))
+    }
 
     private fun edit(y: Int, m: Int, d: Int, block: Day.() -> Unit) {
-        if (y < 2000) return
-        days.getOrPut(LocalDate.of(y, m, d).toString()) { Day() }.block()
-        file.writeText(App.json(days))
+        if (y >= 2000) edit(IDO, LocalDate.of(y, m, d), block)
     }
+
+    const val IDO = "ido"
 
     /** Recibe los callbacks de sincronización (ISyncDataListener) que interesan. */
     fun onSync(method: String, args: List<Any?>) {

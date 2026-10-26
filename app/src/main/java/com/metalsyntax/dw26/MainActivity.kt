@@ -78,8 +78,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(b.root)
 
         b.nav.setOnItemSelectedListener { show(it.itemId); true }
-        b.syncBtn.setOnClickListener { Watch.sync(); render() }
-        b.moreFaces.setOnClickListener { Faces.loadMore() }
+        b.syncBtn.setOnClickListener { if (fit) FitCloud.sync() else Watch.sync(); render() }
+        b.moreFaces.setOnClickListener {
+            if (!fit) Faces.loadMore()
+            else if (!FitCloud.connected) toast("El reloj no está conectado")
+            else pickDial.launch(arrayOf("*/*"))
+        }
 
         tile("hr", R.drawable.ic_heart, R.color.heart, "Pulso")
         tile("kcal", R.drawable.ic_fire, R.color.kcal, "Calorías")
@@ -146,7 +150,7 @@ class MainActivity : AppCompatActivity() {
         b.pageHealth.visibility = if (id == R.id.tab_health) View.VISIBLE else View.GONE
         b.pageWatch.visibility = if (id == R.id.tab_watch) View.VISIBLE else View.GONE
         b.pageFaces.visibility = if (id == R.id.tab_faces) View.VISIBLE else View.GONE
-        if (id == R.id.tab_faces) {
+        if (id == R.id.tab_faces && !fit) {
             Faces.refresh()
             if (Faces.catalog.isEmpty()) Faces.loadMore()
         }
@@ -158,14 +162,10 @@ class MainActivity : AppCompatActivity() {
     private fun render() {
         val paired = profile != null && !adding
         b.pagePair.visibility = if (paired) View.GONE else View.VISIBLE
-        // ponytail: el Pop 2 solo tiene la pantalla Reloj por ahora (salud y esferas del catálogo en PLAN-SIGUIENTE.md)
-        b.navCard.visibility = if (paired && !fit) View.VISIBLE else View.GONE
+        b.navCard.visibility = if (paired) View.VISIBLE else View.GONE
         b.subtitle.text = if (profile == null) "SMART WATCH" else Profiles.name(profile).uppercase()
         if (!paired) {
             b.pageHome.visibility = View.GONE; b.pageHealth.visibility = View.GONE; b.pageWatch.visibility = View.GONE; b.pageFaces.visibility = View.GONE
-        } else if (fit) {
-            b.pageHome.visibility = View.GONE; b.pageHealth.visibility = View.GONE; b.pageFaces.visibility = View.GONE
-            b.pageWatch.visibility = View.VISIBLE
         } else if (listOf(b.pageHome, b.pageHealth, b.pageWatch, b.pageFaces).none { it.visibility == View.VISIBLE }) {
             b.pageHome.visibility = View.VISIBLE
         }
@@ -175,6 +175,7 @@ class MainActivity : AppCompatActivity() {
         b.statusPill.text = when {
             profile == null -> "Sin reloj"
             !fit && Watch.syncing -> "Sincronizando ${Watch.syncProgress}%"
+            fit && FitCloud.syncing -> "Sincronizando…"
             fit && FitCloud.dfuProgress >= 0 -> "Esfera ${FitCloud.dfuProgress}%"
             on -> "Conectado" + if (bat >= 0) " · $bat%" else ""
             fit && FitCloud.state == "CONNECTING" -> "Conectando…"
@@ -193,18 +194,21 @@ class MainActivity : AppCompatActivity() {
     private fun renderHome() {
         val today = LocalDate.now()
         val day = Health.day(today)
-        val live = Watch.live
+        val live = if (fit) null else Watch.live
         val steps = maxOf(live?.totalStep?.toLong() ?: 0, day?.steps ?: 0)
         b.today.text = "Hoy, " + today.dayOfMonth + " de " + today.month.getDisplayName(TextStyle.FULL, es)
         b.steps.text = fmt(steps)
         b.goal.text = "de ${fmt(Watch.stepGoal.toLong())} pasos"
         b.ring.progress = steps / Watch.stepGoal.toFloat()
-        b.syncBtn.isEnabled = Watch.connected && !Watch.syncing
-        b.syncBtn.text = if (Watch.syncing) "Sincronizando… ${Watch.syncProgress}%" else "Sincronizar"
-        b.lastSync.text = if (Watch.lastSync == 0L) "Aún sin sincronizar"
-        else "Última sincronización " + DateUtils.getRelativeTimeSpanString(Watch.lastSync).toString().lowercase(es)
+        val syncing = if (fit) FitCloud.syncing else Watch.syncing
+        val last = if (fit) FitCloud.lastSync else Watch.lastSync
+        b.syncBtn.isEnabled = Profiles.connected(profile) && !syncing
+        b.syncBtn.text = if (!syncing) "Sincronizar" else if (fit) "Sincronizando…" else "Sincronizando… ${Watch.syncProgress}%"
+        b.lastSync.text = if (last == 0L) "Aún sin sincronizar"
+        else "Última sincronización " + DateUtils.getRelativeTimeSpanString(last).toString().lowercase(es)
 
-        setTile("hr", live?.heartRate?.takeIf { it > 0 }?.toString() ?: day?.hrAvg?.takeIf { it > 0 }?.toString(), "lpm",
+        val liveHr = if (fit) FitCloud.heartRate else live?.heartRate ?: 0
+        setTile("hr", liveHr.takeIf { it > 0 }?.toString() ?: day?.hrAvg?.takeIf { it > 0 }?.toString(), "lpm",
             day?.restingHr?.takeIf { it > 0 }?.let { "En reposo $it lpm" })
         setTile("kcal", maxOf(live?.totalCalories ?: 0, day?.kcal ?: 0).takeIf { it > 0 }?.toString(), "kcal", null)
         val meters = maxOf(live?.totalDistances ?: 0, day?.distanceM ?: 0)
@@ -217,7 +221,7 @@ class MainActivity : AppCompatActivity() {
     private fun renderHealth() {
         val days = (6 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
         val labels = days.map { it.dayOfWeek.getDisplayName(TextStyle.NARROW, es).uppercase(es) }
-        val steps = days.map { d -> (Health.day(d)?.steps ?: 0).let { if (d == LocalDate.now()) maxOf(it, Watch.live?.totalStep?.toLong() ?: 0) else it }.toFloat() }
+        val steps = days.map { d -> (Health.day(d)?.steps ?: 0).let { if (d == LocalDate.now()) maxOf(it, if (fit) 0 else Watch.live?.totalStep?.toLong() ?: 0) else it }.toFloat() }
         b.stepsChart.bars(steps, labels)
         b.stepsWeek.text = steps.filter { it > 0 }.takeIf { it.isNotEmpty() }?.let { "Promedio ${fmt(it.average().toLong())} pasos al día" } ?: "Sin datos todavía"
 
@@ -380,6 +384,7 @@ class MainActivity : AppCompatActivity() {
     private var marketShown = 0
 
     private fun renderFaces() {
+        if (fit) return renderFitFaces()
         val p = Faces.installed
         val current = p?.now_show_watch_name?.substringBefore('.')
         val cur = current?.let { Faces.known[it] }
@@ -658,8 +663,54 @@ class MainActivity : AppCompatActivity() {
         uri ?: return@registerForActivityResult
         val f = java.io.File(cacheDir, "dial.bin")
         contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { i.copyTo(it) } }
-        FitCloud.installDial(this, f.path)
+        FitCloud.installDial(this, f.path, uri.lastPathSegment?.substringAfterLast('/')?.substringBeforeLast('.') ?: "Esfera")
         render()
+    }
+
+    /** Esferas propias para el Pop 2 (formato FitCloud, generadas con tools/faces/fitcloud). */
+    private val fitFaces = listOf(Face(-1, "Pip-Boy", "pipboy_pop2", "asset:faces/pipboy_pop2.png", "faces/pipboy_pop2.bin"))
+
+    private fun renderFitFaces() {
+        listOf(b.mineTitle, b.mineHint, b.facesGrid, b.marketTitle, b.marketInfo, b.marketGrid).forEach { it.visibility = View.GONE }
+        b.moreFaces.text = "Instalar archivo .bin"
+        val cur = fitFaces.firstOrNull { it.name == FitCloud.lastDial }
+        if (b.currentWatch.tag != cur?.image) Faces.load(this, cur?.image, b.currentWatch)
+        b.currentWatch.placeholder = getDrawable(R.drawable.ic_face)?.mutate()?.apply { setTint(0x66FFFFFF) }
+        b.currentName.text = FitCloud.lastDial ?: Profiles.name(profile)
+        b.facesInfo.text = when {
+            FitCloud.dfuProgress >= 0 -> "Instalando… ${FitCloud.dfuProgress}%"
+            !FitCloud.connected -> "Conecta el reloj para cambiar la esfera"
+            FitCloud.lastDial != null -> "Última esfera instalada desde Pulsix"
+            else -> "Instala una esfera exclusiva o un archivo .bin"
+        }
+        val key = "fit|${FitCloud.lastDial}"
+        if (key == facesKey) return
+        facesKey = key
+        b.exclusiveGrid.removeAllViews()
+        fitFaces.forEach { f ->
+            faceCell(b.exclusiveGrid, f.name, f.image, f.name == FitCloud.lastDial, R.drawable.badge_add to R.drawable.ic_add,
+                { confirmFitInstall(f) }) { confirmFitInstall(f) }
+        }
+        repeat((3 - fitFaces.size % 3) % 3) {
+            b.exclusiveGrid.addView(View(this), GridLayout.LayoutParams().apply { width = 0; columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f) })
+        }
+    }
+
+    private fun confirmFitInstall(f: Face) {
+        if (!FitCloud.connected) return toast("Conecta el reloj primero")
+        if (FitCloud.dfuProgress >= 0) return toast("Espera a que termine la instalación actual")
+        val mock = WatchMock(this)
+        Faces.load(this, f.image, mock)
+        MaterialAlertDialogBuilder(this).setTitle(f.name)
+            .setMessage("Reemplaza la esfera descargada del reloj. Tarda cerca de un minuto y el reloj se desconecta mientras tanto.")
+            .setView(FrameLayout(this).apply { setPadding(dp(72), dp(8), dp(72), 0); addView(mock) })
+            .setPositiveButton("Instalar") { _, _ ->
+                val file = java.io.File(cacheDir, "${f.file}.bin")
+                assets.open(f.asset!!).use { i -> file.outputStream().use { i.copyTo(it) } }
+                FitCloud.installDial(this, file.path, f.name)
+                render()
+            }
+            .setNegativeButton("Cancelar", null).show()
     }
 
     private fun buildFitRows() {
@@ -669,14 +720,12 @@ class MainActivity : AppCompatActivity() {
             else Watch.notifyEnabled = !Watch.notifyEnabled
             render()
         }
-        row(f, "dial", R.drawable.ic_face, "Instalar esfera (.bin)", "Archivo de esfera FitCloud") {
-            if (!FitCloud.connected) toast("El reloj no está conectado") else pickDial.launch(arrayOf("*/*"))
-        }
         val r = b.rows
         row(r, "find", R.drawable.ic_vibrate, "Buscar mi reloj", "Lo hace vibrar") {
             if (!FitCloud.connected) toast("El reloj no está conectado") else { FitCloud.find(); toast("Buscando ${Profiles.name(profile)}…") }
         }
-        row(r, "reconnect", R.drawable.ic_sync, "Reconectar", null) { FitCloud.connect(profile!!.mac) }
+        row(r, "sync", R.drawable.ic_sync, "Sincronizar ahora", null) { FitCloud.sync(); render() }
+        row(r, "reconnect", R.drawable.ic_watch, "Reconectar", null) { FitCloud.connect(profile!!.mac) }
         chipRow(r, "theme", R.drawable.ic_theme, "Tema",
             listOf("Automático" to "auto", "Claro" to "light", "Oscuro" to "dark", "Negro" to "black"), { Watch.theme }) {
             if (it != Watch.theme) { Watch.theme = it as String; App.applyTheme(); recreate() }
