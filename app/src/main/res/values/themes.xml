@@ -45,8 +45,9 @@
         <item name="cornerSize">50%</item>
     </style>
 
-    <!-- Negro: fondos negros puros (pantallas AMOLED); se usa junto con el modo noche -->
-    <style name="Theme.DW26.Black">
+    <!-- Negro: fondos negros puros (pantallas AMOLED); se usa junto con el modo noche.
+         Sin padre: se aplica encima del tema (theme.applyStyle) sin reponer el azul ni los colores neutros -->
+    <style name="DW.Black" parent="">
         <item name="dwBg">#000000</item>
         <item name="dwSurface">#101114</item>
         <item name="dwHeader">#000000</item>
@@ -59,6 +60,28 @@
         <item name="android:colorBackground">#000000</item>
         <item name="android:statusBarColor">#000000</item>
         <item name="android:navigationBarColor">#000000</item>
+    </style>
+
+    <!-- relojes que no son Daewoo: blanco, gris claro y negro, sin el azul de la marca -->
+    <style name="DW.Neutral" parent="">
+        <item name="colorPrimary">@color/n_primary</item>
+        <item name="colorOnPrimary">@color/n_on_primary</item>
+        <item name="colorPrimaryContainer">@color/n_sky</item>
+        <item name="colorOnPrimaryContainer">@color/n_text</item>
+        <item name="colorSecondaryContainer">@color/n_sky</item>
+        <item name="colorOnSecondaryContainer">@color/n_text</item>
+        <item name="colorSurface">@color/n_surface</item>
+        <item name="colorOnSurface">@color/n_text</item>
+        <item name="colorSurfaceContainer">@color/n_surface</item>
+        <item name="colorSurfaceContainerHigh">@color/n_surface</item>
+        <item name="colorOutline">@color/n_muted</item>
+        <item name="android:colorBackground">@color/n_bg</item>
+        <item name="android:statusBarColor">@color/n_header</item>
+        <item name="android:navigationBarColor">@color/n_bg</item>
+        <item name="dwBg">@color/n_bg</item>
+        <item name="dwSurface">@color/n_surface</item>
+        <item name="dwHeader">@color/n_header</item>
+        <item name="dwSky">@color/n_sky</item>
     </style>
 
     <style name="DW" />
@@ -88,18 +111,18 @@
     </style>
 
     <style name="DW.Label">
-        <item name="android:textColor">@color/dw_muted</item>
+        <item name="android:textColor">?attr/colorOutline</item>
         <item name="android:textSize">13sp</item>
     </style>
 
     <style name="DW.Value">
-        <item name="android:textColor">@color/dw_text</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="DW.Section">
-        <item name="android:textColor">@color/dw_text</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:textSize">17sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:layout_marginTop">20dp</item>

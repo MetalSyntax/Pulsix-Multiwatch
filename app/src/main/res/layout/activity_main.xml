@@ -26,7 +26,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:letterSpacing="0.28"
-                android:text="DAEWOO"
+                android:id="@+id/brand"
                 android:textColor="#FFFFFF"
                 android:textSize="22sp"
                 android:textStyle="bold" />
@@ -228,9 +228,9 @@
                             android:background="@drawable/circle_sky"
                             android:padding="16dp"
                             android:src="@drawable/ic_watch"
-                            app:tint="@color/dw_blue" />
+                            app:tint="?attr/colorPrimary" />
                         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:layout_weight="1" android:orientation="vertical">
-                            <TextView style="@style/DW.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DW26" />
+                            <TextView style="@style/DW.Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/watchName" />
                             <TextView android:id="@+id/watchState" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" />
                             <TextView android:id="@+id/watchInfo" style="@style/DW.Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" />
                         </LinearLayout>
@@ -328,14 +328,14 @@
                 android:background="@drawable/circle_sky"
                 android:padding="28dp"
                 android:src="@drawable/ic_watch"
-                app:tint="@color/dw_blue" />
+                app:tint="?attr/colorPrimary" />
 
             <TextView
                 style="@style/DW.Value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Vincula tu DW26" />
+                android:text="Vincula tu reloj" />
 
             <TextView
                 style="@style/DW.Label"
@@ -343,7 +343,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
                 android:gravity="center"
-                android:text="Acerca el reloj al teléfono, con la pantalla encendida, y toca Buscar." />
+                android:text="Acerca el reloj al teléfono, con la pantalla encendida, y toca Buscar, o escanea el código QR que muestra el reloj." />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/scanBtn"
@@ -351,6 +351,15 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
                 android:text="Buscar reloj" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/qrBtn"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:text="Escanear código QR"
+                app:icon="@drawable/ic_qr" />
 
             <ListView
                 android:id="@+id/devices"

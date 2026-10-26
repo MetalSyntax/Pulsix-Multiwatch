@@ -25,6 +25,15 @@ class AdbCommands : BroadcastReceiver() {
             "connect" -> BLEManager.autoConnect()
             "dumpfunctions" -> java.io.File(context.filesDir, "functions.json").writeText(App.json(Watch.functions))
             "face" -> Faces.exclusive.firstOrNull { it.file == intent.getStringExtra("text") }?.let { Faces.install(context, it) }
+            // FitCloud (Pop 2): fitconnect <mac>, fitfind, fitdial <ruta .bin en el teléfono>
+            "fitconnect" -> (intent.getStringExtra("text") ?: Profiles.list.first { it.kind == "fitcloud" }.mac).let { mac ->
+                if (Profiles.list.none { it.mac == mac }) Profiles.add(Profile(mac, "fitcloud"))
+                FitCloud.connect(mac)
+                WatchService.start(context)
+            }
+            "fitfind" -> FitCloud.find()
+            "fitinfo" -> FitCloud.refresh()
+            "fitdial" -> FitCloud.installDial(context, intent.getStringExtra("text") ?: return)
             "theme" -> { Watch.theme = intent.getStringExtra("text") ?: "auto"; App.applyTheme() } // auto|light|dark|black
         }
     }

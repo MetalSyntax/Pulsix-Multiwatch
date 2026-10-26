@@ -33,6 +33,8 @@ class App : Application() {
             sdkLogCallback = SdkLogCallback.ICallBack { tag, msg -> Log.d("IDO/$tag", msg) }
         })
         Watch.init(this)
+        Profiles.init(this)
+        FitCloud.init(this)
         applyTheme()
         Health.init(this)
         registerAllCallbacks()

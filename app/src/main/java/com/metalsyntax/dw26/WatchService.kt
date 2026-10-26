@@ -15,7 +15,7 @@ import com.ido.ble.BLEManager
 class WatchService : Service() {
 
     private val onSdk: SdkListener = { method, _ ->
-        if (method.startsWith("ConnectCallBack.") || method.endsWith("onGetBatteryInfo")) update()
+        if (method.startsWith("ConnectCallBack.") || method.endsWith("onGetBatteryInfo") || method.startsWith("FitCloud.")) update()
     }
 
     override fun onCreate() {
@@ -29,7 +29,10 @@ class WatchService : Service() {
         Music.start(this)
         Calls.start(this)
         hourly.run()
-        if (!Watch.connected) BLEManager.autoConnect()
+        if (!Watch.connected && Watch.bound) BLEManager.autoConnect()
+        // ponytail: el SDK de FitCloud maneja un solo reloj a la vez; con varios Pop 2 se conecta el activo o el primero
+        (Profiles.active?.takeIf { it.kind == "fitcloud" } ?: Profiles.list.firstOrNull { it.kind == "fitcloud" })
+            ?.let { if (!FitCloud.connected) FitCloud.connect(it.mac) }
     }
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -51,12 +54,11 @@ class WatchService : Service() {
 
     private fun build(): Notification = Notification.Builder(this, CHANNEL)
         .setSmallIcon(R.drawable.ic_watch)
-        .setColor(getColor(R.color.dw_blue))
-        .setContentTitle("Daewoo DW26")
-        .setContentText(
-            if (Watch.connected) "Conectado" + (if (Watch.battery >= 0) " · batería ${Watch.battery}%" else "")
-            else "Buscando el reloj…"
-        )
+        .setContentTitle(Profiles.list.joinToString(" · ") { Profiles.name(it) })
+        .setContentText(Profiles.list.joinToString(" · ") { p ->
+            val bat = if (p.daewoo) Watch.battery else FitCloud.battery
+            if (Profiles.connected(p)) "Conectado" + (if (bat >= 0) " $bat%" else "") else "Buscando…"
+        })
         .setOngoing(true)
         .setContentIntent(PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
         .build()
@@ -64,7 +66,7 @@ class WatchService : Service() {
     companion object {
         private const val CHANNEL = "watch"
         fun start(c: Context) {
-            if (BLEManager.isBind()) c.startForegroundService(Intent(c, WatchService::class.java))
+            if (Profiles.list.isNotEmpty()) c.startForegroundService(Intent(c, WatchService::class.java))
         }
     }
 }

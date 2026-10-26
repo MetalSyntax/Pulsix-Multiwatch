@@ -27,7 +27,9 @@ class NotifListener : NotificationListenerService() {
 
     companion object {
         fun send(pkg: String, title: String, text: String, appName: String = "DW26") {
-            if (!BLEManager.isConnected() || !Watch.notifyEnabled) return
+            if (!Watch.notifyEnabled) return
+            FitCloud.notify(title, text)
+            if (!BLEManager.isConnected()) return
             BLEManager.sendNotification(NotificationPara().apply {
                 notify_type = typeOf(pkg)
                 evt_type = 1

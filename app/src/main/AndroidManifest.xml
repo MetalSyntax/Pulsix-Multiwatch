@@ -49,6 +49,11 @@
             android:name="com.ido.ble.bluetooth.DeviceConnectService"
             android:exported="false" />
 
+        <!-- DFU de Realtek: lo usa el SDK de FitCloud para subir esferas al Pop 2 (igual que en Zepp Active) -->
+        <service
+            android:name="com.realsil.sdk.dfu.DfuService"
+            android:exported="false" />
+
         <service
             android:name=".WatchService"
             android:exported="false"

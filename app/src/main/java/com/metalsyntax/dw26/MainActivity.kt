@@ -43,7 +43,12 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityMainBinding
     private val es = Locale("es")
-    private val found = linkedMapOf<String, BLEDevice>()
+    /** BLEDevice = DW26 (SDK de IDO); String = nombre de un reloj FitCloud (Pop 2) */
+    private val found = linkedMapOf<String, Any>()
+    private val profile by lazy { Profiles.active }
+    private val fit get() = profile?.kind == "fitcloud"
+    /** "Agregar reloj" desde el selector de perfiles: muestra la pantalla de vincular aunque ya haya uno */
+    private var adding = false
     private lateinit var adapter: ArrayAdapter<String>
     private val tiles = mutableMapOf<String, View>()
     private val ticker = Handler(Looper.getMainLooper())
@@ -66,7 +71,8 @@ class MainActivity : AppCompatActivity() {
                 .setCancelable(false).show()
             return
         }
-        if (Watch.theme == "black") setTheme(R.style.Theme_DW26_Black)
+        if (Profiles.neutral) theme.applyStyle(R.style.DW_Neutral, true)
+        if (Watch.theme == "black") theme.applyStyle(R.style.DW_Black, true)
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
@@ -82,8 +88,11 @@ class MainActivity : AppCompatActivity() {
         tile("stress", R.drawable.ic_psych, R.color.stress, "Estrés")
         tile("spo2", R.drawable.ic_air, R.color.spo2, "Oxígeno (SpO₂)")
 
-        buildWatchRows()
+        if (fit) buildFitRows() else buildWatchRows()
         setupPairing()
+        b.brand.text = Profiles.brand(profile)
+        if (Profiles.neutral) b.subtitle.setTextColor(0xFFAAAAAA.toInt())
+        b.brand.parent.let { it as View }.setOnClickListener { showProfiles() }
 
         requestPermissions(
             if (Build.VERSION.SDK_INT >= 31) arrayOf(
@@ -116,9 +125,13 @@ class MainActivity : AppCompatActivity() {
         when (method) {
             "ScanCallBack.onFindDevice" -> return addDevice(args[0] as BLEDevice)
             "ConnectCallBack.onConnectSuccess" -> if (!Watch.bound) BLEManager.bind()
-            "BindCallBack.onSuccess" -> { WatchService.start(this); b.nav.selectedItemId = R.id.tab_home }
+            "BindCallBack.onSuccess" -> { Profiles.add(Profile(Watch.mac, "ido")); WatchService.start(this); recreate() }
+            "FitCloud.state" -> if (adding && FitCloud.connected) { adding = false; recreate() }
+            "FitCloud.error" -> if (args[1] != null) toast("El reloj no aceptó la vinculación: confírmala en el reloj")
+            "FitCloud.dialInstalled" -> toast("Esfera instalada")
+            "FitCloud.dialFailed" -> toast("No se pudo instalar la esfera (${args[0]})")
             "BindCallBack.onFailed", "BindCallBack.onReject" -> toast("No se pudo vincular. Acepta en el reloj e inténtalo de nuevo.")
-            "UnbindCallBack.onSuccess" -> stopService(Intent(this, WatchService::class.java))
+            "UnbindCallBack.onSuccess" -> { Profiles.list.filter { it.daewoo }.forEach(Profiles::remove); afterRemove() }
             "Faces.installed" -> toast("Esfera instalada")
             "Faces.failed" -> if (args.firstOrNull() == "sin espacio") askReplace() else toast("No se pudo instalar la esfera: ${args.firstOrNull() ?: ""}")
             "GetDeviceParaCallBack.onGetAlarmV3" -> if (alarmSheet?.isShowing == true) showAlarms()
@@ -143,23 +156,32 @@ class MainActivity : AppCompatActivity() {
     // ---------- pintar estado ----------
 
     private fun render() {
-        val paired = Watch.bound
+        val paired = profile != null && !adding
         b.pagePair.visibility = if (paired) View.GONE else View.VISIBLE
-        b.navCard.visibility = if (paired) View.VISIBLE else View.GONE
+        // ponytail: el Pop 2 solo tiene la pantalla Reloj por ahora (salud y esferas del catálogo en PLAN-SIGUIENTE.md)
+        b.navCard.visibility = if (paired && !fit) View.VISIBLE else View.GONE
+        b.subtitle.text = if (profile == null) "SMART WATCH" else Profiles.name(profile).uppercase()
         if (!paired) {
             b.pageHome.visibility = View.GONE; b.pageHealth.visibility = View.GONE; b.pageWatch.visibility = View.GONE; b.pageFaces.visibility = View.GONE
+        } else if (fit) {
+            b.pageHome.visibility = View.GONE; b.pageHealth.visibility = View.GONE; b.pageFaces.visibility = View.GONE
+            b.pageWatch.visibility = View.VISIBLE
         } else if (listOf(b.pageHome, b.pageHealth, b.pageWatch, b.pageFaces).none { it.visibility == View.VISIBLE }) {
             b.pageHome.visibility = View.VISIBLE
         }
 
+        val on = Profiles.connected(profile)
+        val bat = if (fit) FitCloud.battery else Watch.battery
         b.statusPill.text = when {
-            !paired -> "Sin reloj"
-            Watch.syncing -> "Sincronizando ${Watch.syncProgress}%"
-            Watch.connected -> "Conectado" + if (Watch.battery >= 0) " · ${Watch.battery}%" else ""
+            profile == null -> "Sin reloj"
+            !fit && Watch.syncing -> "Sincronizando ${Watch.syncProgress}%"
+            fit && FitCloud.dfuProgress >= 0 -> "Esfera ${FitCloud.dfuProgress}%"
+            on -> "Conectado" + if (bat >= 0) " · $bat%" else ""
+            fit && FitCloud.state == "CONNECTING" -> "Conectando…"
             else -> "Desconectado"
         }
         b.statusPill.setCompoundDrawablesRelativeWithIntrinsicBounds(getDrawable(R.drawable.dot)?.mutate()?.apply {
-            setTint(getColor(if (Watch.connected) R.color.ok else R.color.dw_muted))
+            setTint(getColor(if (on) R.color.ok else R.color.dw_muted))
         }, null, null, null)
 
         renderHome()
@@ -216,6 +238,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderWatch() {
+        b.watchName.text = Profiles.name(profile)
+        if (fit) return renderFit()
         b.watchState.text = when {
             Watch.connected -> "Conectado" + if (Watch.battery >= 0) " · batería ${Watch.battery}%" else ""
             Watch.bound -> "Desconectado · se reconectará solo"
@@ -288,7 +312,7 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton("Cerrar", null).show()
         }
         row(r, "unbind", R.drawable.ic_unlink, "Desvincular reloj", null) {
-            MaterialAlertDialogBuilder(this).setTitle("¿Desvincular el DW26?")
+            MaterialAlertDialogBuilder(this).setTitle("¿Desvincular ${Profiles.name(profile)}?")
                 .setMessage("El reloj dejará de sincronizarse con este teléfono hasta que lo vuelvas a vincular.")
                 .setPositiveButton("Desvincular") { _, _ -> BLEManager.unbind() }
                 .setNegativeButton("Cancelar", null).show()
@@ -343,7 +367,7 @@ class MainActivity : AppCompatActivity() {
         if (!Watch.connected) return toast("El reloj no está conectado")
         Watch.findDevice()
         val d = MaterialAlertDialogBuilder(this).setTitle("Buscando tu reloj…")
-            .setMessage("El DW26 está vibrando. Puedes detenerlo desde el reloj o aquí.")
+            .setMessage("${Profiles.name(profile)} está vibrando. Puedes detenerlo desde el reloj o aquí.")
             .setPositiveButton("Lo encontré") { _, _ -> Watch.stopFindDevice() }
             .setOnDismissListener { Watch.stopFindDevice() }
             .show()
@@ -414,11 +438,12 @@ class MainActivity : AppCompatActivity() {
         Faces.load(this, image, mock)
         v.findViewById<TextView>(R.id.name).apply {
             text = label
-            if (current) { setTextColor(getColor(R.color.dw_blue)); setTypeface(typeface, android.graphics.Typeface.BOLD) }
+            if (current) { setTextColor(com.google.android.material.color.MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary)); setTypeface(typeface, android.graphics.Typeface.BOLD) }
         }
         badge?.let { (bg, icon) ->
             v.findViewById<ImageView>(R.id.badge).apply {
-                visibility = View.VISIBLE; setBackgroundResource(bg); setImageResource(icon); setColorFilter(0xFFFFFFFF.toInt())
+                visibility = View.VISIBLE; setBackgroundResource(bg); setImageResource(icon)
+                setColorFilter(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnPrimary))
                 setOnClickListener { onBadge() }
             }
         }
@@ -533,25 +558,155 @@ class MainActivity : AppCompatActivity() {
             // un reloj emparejado y ya conectado al sistema no se anuncia: se ofrece por MAC
             @Suppress("MissingPermission")
             getSystemService(BluetoothManager::class.java).adapter.bondedDevices
-                .filter { it.type != BluetoothDevice.DEVICE_TYPE_CLASSIC && it.name?.startsWith("DW") == true }
-                .forEach { addDevice(BLEDevice().apply { mDeviceName = it.name; mDeviceAddress = it.address }) }
+                .filter { it.type != BluetoothDevice.DEVICE_TYPE_CLASSIC && !it.name.isNullOrBlank() }
+                .forEach { if (it.name.startsWith("DW")) addDevice(BLEDevice().apply { mDeviceName = it.name; mDeviceAddress = it.address }) else if (FitCloud.available) addFit(it.address, it.name) }
             BLEManager.startScanDevices()
+            scanFit()
             b.scanBtn.text = "Buscando…"
             ticker.postDelayed({ b.scanBtn.text = "Buscar de nuevo" }, 10_000)
         }
         b.devices.setOnItemClickListener { _, _, pos, _ ->
-            val dev = found.values.elementAt(pos)
+            val (mac, dev) = found.entries.elementAt(pos).toPair()
             BLEManager.stopScanDevices()
-            b.scanBtn.text = "Vinculando con ${dev.mDeviceName}…"
-            BLEManager.connect(dev)
+            stopFitScan()
+            if (dev is BLEDevice) {
+                b.scanBtn.text = "Vinculando con ${dev.mDeviceName}…"
+                BLEManager.connect(dev)
+            } else pairFit(mac, dev as String)
+        }
+        b.qrBtn.setOnClickListener {
+            com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(this).startScan()
+                .addOnSuccessListener { code ->
+                    val qr = Profiles.parseQr(code.rawValue ?: "") ?: return@addOnSuccessListener toast("Ese código no es de un reloj compatible")
+                    val (mac, name) = qr
+                    if (name?.startsWith("DW") == true) BLEManager.connect(BLEDevice().apply { mDeviceName = name; mDeviceAddress = mac })
+                    else if (FitCloud.available) pairFit(mac, name ?: mac)
+                    else toast("Esta versión no trae el SDK de FitCloud")
+                }
+                .addOnFailureListener { toast("No se pudo abrir el escáner: ${it.message}") }
         }
     }
 
+    private fun pairFit(mac: String, name: String) {
+        b.scanBtn.text = "Conectando con $name…"
+        adding = true
+        Profiles.add(Profile(mac, "fitcloud"))
+        FitCloud.connect(mac)
+        WatchService.start(this)
+    }
+
+    /** Relojes FitCloud: anuncian el servicio 0xFEE7 sin datos de fabricante (así los detecta Zepp Active). */
+    private val fitScan = object : android.bluetooth.le.ScanCallback() {
+        @Suppress("MissingPermission")
+        override fun onScanResult(type: Int, r: android.bluetooth.le.ScanResult) {
+            val name = r.scanRecord?.deviceName ?: r.device.name ?: return
+            runOnUiThread { addFit(r.device.address, name) }
+        }
+    }
+
+    @Suppress("MissingPermission")
+    private fun scanFit() {
+        if (!FitCloud.available) return
+        val scanner = getSystemService(BluetoothManager::class.java).adapter.bluetoothLeScanner ?: return
+        val filter = android.bluetooth.le.ScanFilter.Builder()
+            .setServiceUuid(android.os.ParcelUuid.fromString("0000fee7-0000-1000-8000-00805f9b34fb")).build()
+        runCatching { scanner.startScan(listOf(filter), android.bluetooth.le.ScanSettings.Builder().build(), fitScan) }
+        ticker.postDelayed({ stopFitScan() }, 10_000)
+    }
+
+    @Suppress("MissingPermission")
+    private fun stopFitScan() {
+        runCatching { getSystemService(BluetoothManager::class.java).adapter.bluetoothLeScanner?.stopScan(fitScan) }
+    }
+
+    private fun addFit(mac: String, name: String) {
+        if (found.containsKey(mac) || Profiles.list.any { it.mac == mac }) return
+        found[mac] = name
+        adapter.add("$name  ·  $mac")
+    }
+
     private fun addDevice(d: BLEDevice) {
-        if (d.mDeviceName.isNullOrBlank()) return
+        if (d.mDeviceName.isNullOrBlank() || Profiles.list.any { it.mac == d.mDeviceAddress }) return
         val known = found.containsKey(d.mDeviceAddress)
         found[d.mDeviceAddress] = d // el del escaneo trae id/plataforma que el emparejado no tiene
         if (!known) adapter.add("${d.mDeviceName}  ·  ${d.mDeviceAddress}")
+    }
+
+    // ---------- perfiles ----------
+
+    private fun showProfiles() {
+        val list = Profiles.list
+        val labels = list.map { p ->
+            (if (p == profile) "● " else "") + Profiles.name(p) + if (Profiles.connected(p)) " · conectado" else ""
+        } + "+ Agregar reloj"
+        MaterialAlertDialogBuilder(this).setTitle("Mis relojes")
+            .setItems(labels.toTypedArray()) { _, i ->
+                if (i == list.size) { adding = true; render() }
+                else if (list[i] != profile) { Profiles.active = list[i]; WatchService.start(this); recreate() }
+            }.show()
+    }
+
+    /** Tras quitar un perfil: otro activo o volver a la pantalla de vincular. */
+    private fun afterRemove() {
+        if (Profiles.list.isEmpty()) stopService(Intent(this, WatchService::class.java))
+        recreate()
+    }
+
+    // ---------- pantalla Reloj del Pop 2 (FitCloud) ----------
+
+    private val pickDial = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        uri ?: return@registerForActivityResult
+        val f = java.io.File(cacheDir, "dial.bin")
+        contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { i.copyTo(it) } }
+        FitCloud.installDial(this, f.path)
+        render()
+    }
+
+    private fun buildFitRows() {
+        val f = b.rowsFeatures
+        row(f, "notify", R.drawable.ic_bell, "Notificaciones", null, toggle = true) {
+            if (!notifAccess) startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            else Watch.notifyEnabled = !Watch.notifyEnabled
+            render()
+        }
+        row(f, "dial", R.drawable.ic_face, "Instalar esfera (.bin)", "Archivo de esfera FitCloud") {
+            if (!FitCloud.connected) toast("El reloj no está conectado") else pickDial.launch(arrayOf("*/*"))
+        }
+        val r = b.rows
+        row(r, "find", R.drawable.ic_vibrate, "Buscar mi reloj", "Lo hace vibrar") {
+            if (!FitCloud.connected) toast("El reloj no está conectado") else { FitCloud.find(); toast("Buscando ${Profiles.name(profile)}…") }
+        }
+        row(r, "reconnect", R.drawable.ic_sync, "Reconectar", null) { FitCloud.connect(profile!!.mac) }
+        chipRow(r, "theme", R.drawable.ic_theme, "Tema",
+            listOf("Automático" to "auto", "Claro" to "light", "Oscuro" to "dark", "Negro" to "black"), { Watch.theme }) {
+            if (it != Watch.theme) { Watch.theme = it as String; App.applyTheme(); recreate() }
+        }
+        row(r, "log", R.drawable.ic_bug, "Registro técnico", "Para diagnóstico") {
+            MaterialAlertDialogBuilder(this).setTitle("Registro técnico")
+                .setMessage(App.history.toList().takeLast(120).joinToString("\n"))
+                .setPositiveButton("Cerrar", null).show()
+        }
+        row(r, "unbind", R.drawable.ic_unlink, "Quitar este reloj", null) {
+            MaterialAlertDialogBuilder(this).setTitle("¿Quitar ${Profiles.name(profile)}?")
+                .setMessage("Se borra el perfil de esta app. El reloj sigue vinculado al Bluetooth del teléfono.")
+                .setPositiveButton("Quitar") { _, _ -> FitCloud.disconnect(); Profiles.remove(profile!!); afterRemove() }
+                .setNegativeButton("Cancelar", null).show()
+        }
+    }
+
+    private fun renderFit() {
+        b.watchState.text = when {
+            FitCloud.dfuProgress >= 0 -> "Instalando esfera… ${FitCloud.dfuProgress}%"
+            FitCloud.connected -> "Conectado" + (if (FitCloud.battery >= 0) " · batería ${FitCloud.battery}%" else "") +
+                (if (FitCloud.charging) " · cargando" else "") + (if (FitCloud.heartRate > 0) " · ${FitCloud.heartRate} lpm" else "")
+            FitCloud.state == "CONNECTING" -> "Conectando…"
+            else -> "Desconectado"
+        }
+        b.watchInfo.text = listOfNotNull(profile?.mac, FitCloud.firmware.takeIf { FitCloud.connected }).joinToString("\n")
+        val listener = notifAccess
+        rowSub("notify", if (!listener) "Falta dar permiso" else if (Watch.notifyEnabled) "Se reenvían al reloj" else "Desactivadas")
+        toggle("notify", listener && Watch.notifyEnabled)
+        chipRows.forEach { (g, sel) -> (0 until g.childCount).map { g.getChildAt(it) as Chip }.forEach { it.isChecked = it.tag == sel() } }
     }
 
     // ---------- utilidades ----------

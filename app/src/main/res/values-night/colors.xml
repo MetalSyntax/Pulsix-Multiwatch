@@ -17,4 +17,13 @@
     <color name="stress">#B585EA</color>
     <color name="spo2">#45B8F5</color>
     <color name="ok">#3DDC7C</color>
+    <!-- tema neutro (relojes que no son Daewoo) -->
+    <color name="n_primary">#F2F2F2</color>
+    <color name="n_on_primary">#111111</color>
+    <color name="n_sky">#262626</color>
+    <color name="n_bg">#0E0E0E</color>
+    <color name="n_surface">#1A1A1A</color>
+    <color name="n_header">#000000</color>
+    <color name="n_text">#EDEDED</color>
+    <color name="n_muted">#9A9A9A</color>
 </resources>

@@ -36,7 +36,7 @@ class Chart @JvmOverloads constructor(c: Context, a: AttributeSet? = null) : Vie
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = c.dp(11f); color = c.getColor(R.color.dw_muted); textAlign = Paint.Align.CENTER }
     private val grid = Paint().apply { color = c.getColor(R.color.dw_line); strokeWidth = c.dp(1f) }
-    var color = c.getColor(R.color.dw_blue)
+    var color = com.google.android.material.color.MaterialColors.getColor(c, androidx.appcompat.R.attr.colorPrimary, 0)
 
     fun bars(v: List<Float>, l: List<String>) { values = v; labels = l; xs = null; line = false; invalidate() }
 
@@ -91,7 +91,7 @@ class WatchMock @JvmOverloads constructor(c: Context, a: AttributeSet? = null) :
 
     private val body = Paint(Paint.ANTI_ALIAS_FLAG)
     private val screen = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
-    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = c.getColor(R.color.dw_blue) }
+    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = com.google.android.material.color.MaterialColors.getColor(c, androidx.appcompat.R.attr.colorPrimary, 0) }
     private val img = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val r = RectF(); private val sr = RectF(); private val clip = Path()
 
